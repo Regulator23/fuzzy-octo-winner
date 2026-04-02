@@ -1,6 +1,7 @@
+// Global memory for accounts
 const RAW_SAVE_DATA = {
 
-};
+    };
 let PLAYER_ACCOUNTS = RAW_SAVE_DATA;
 console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
 ( () => {
@@ -41,6 +42,7 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                       , r = i(111)
                       , o = i(28)
                       , l = i(874);
+                    globalThis.gameState = s.A;
                     function d(t) {
                         const e = [];
                         if (s.A.mobTable?.length > 0) {
@@ -111,36 +113,94 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                         }
                         )),
                         s.A.gamemode) {
+                        case a.LX.WAVES:
+                            if (s.A.currentWave === 0) {
+                                s.A.waveSpawning = true;
+                                s.A.waveStopped = true;
+                            };
+                            
+                            if (s.A.isWaves && s.A.livingMobCount <= 5 && !s.A.waveSpawning) {
+                                s.A.luckyWaves = 1;
+                                Array.from(s.A.clients.values()).forEach(client => {
+                                    if (client.DiedInWaves === true) {
+                                        client.DiedInWaves = false;
+                                        client.talk(s.fh.SPAWN);
+                                    }
+                                });
+                                
+                                s.A.waveSpawning = true; 
+                                s.A.waveStopped = false;
+                                s.A.currentWave++,
+                                s.A.maxMobs = s.A.livingMobCount + 8 + Math.round(Math.pow(s.A.currentWave,1.45)),
+                                s.A.width = s.A.height = Math.min(1024 + 20 * s.A.currentWave, Math.pow(128, 2)),
+                                s.A.clients.forEach((t => t.sendRoom()));
+                                const t = d(s.A.maxMobs);
+                                const totalTime = 20000+Math.round(Math.pow(s.A.currentWave, 1.1)*1000); // 20 seconds
+                                const MaxMobsStart = s.A.maxMobs
+                                for (let e = 0; e < MaxMobsStart; e++) {
+                                    // --- CHANGED MATH HERE ---
+                                    // We use Math.pow with 0.5 (square root). 
+                                    // This makes the time progress slower relative to the mob count initially,
+                                    // resulting in a 'back-loaded' spawn wave.
+                                    const delay = totalTime * Math.pow(e / s.A.maxMobs, 0.8);
+                                    
+                                    setTimeout(() => {
+                                        let customRarity = (Math.pow(1.094, s.A.currentWave))-(Math.random() * (Math.pow(1.094, s.A.currentWave))/1.75)
+                                        if (customRarity > 7) customRarity = 7;
+                                        if (customRarity < 0) customRarity = 0;
+                                        if (customRarity === 4 && Math.random() < 0.9) customRarity = 3;
+                                        if (customRarity === 5 && Math.random() < 0.95) customRarity = 4;
+                                        if (customRarity === 7 && Math.random() < 0.995) customRarity = 6;
+                                        if (customRarity === 6 && Math.random() < 0.9) customRarity = 5;
+                                        if (!s.A.waveStopped) {
+                                            if (-1 === t[e]) {
+                                                new h.cS(s.A.random(), Math.floor(customRarity), s.A.currentWave);
+                                            } else {
+                                                const i = new h.Bw(s.A.random());
+                                                i.define(n.ey[t[e]], Math.floor(customRarity));
+                                                s.A.aliveMobs.push(i);
+                                            }
+                                        }
+                                        if (e === 1) {
+                                            Array.from(s.A.clients.values()).forEach(t => {
+                    
+                                                // 2. Get the name (Account name if logged in, otherwise just username)
+                                                const name = t.uuid;
+                                                let fullSaveData = {}
+                                                if (name) {
+                                                    // 3. Build the data object for this specific player
+                                                    fullSaveData = {
+                                                        slots: t.slots || [],
+                                                        secondarySlots: t.secondarySlots || [],
+                                                        inventory: t.inventory || {},
+                                                        xp: t.xp,
+                                                        level: t.level,
+                                                        skills: t.skills,
+                                                        skillpoints: t.skillpoints
+                                                    };
+                                                    console.log(`"${name}": ${JSON.stringify(fullSaveData)},`);
+                                                    t.systemMessage("Saved Account!");
+                                                }
+                                            });
+                                        }
+
+                                        if (e === MaxMobsStart - 1) {
+                                            s.A.waveSpawning = false;
+                                        }
+                                    }, delay); // Use the new delay variable
+                                }
+                            }
+                            break;
                         case a.LX.FFA:
                         case a.LX.TDM:
                             {
                                 const t = s.A.width
-                                  , e = 1024 + 256 * (s.A.clients.size - 1);
+                                    , e = 1024 + 256 * (s.A.clients.size - 1);
                                 t !== e && (s.A.width = s.A.height = e,
                                 s.A.maxMobs = 10 + 2 * (s.A.clients.size - 1),
                                 s.A.clients.forEach((t => t.sendRoom())))
                             }
-                            break;
-                        case a.LX.WAVES:
-                            if (s.A.isWaves && s.A.livingMobCount <= 0) {
-                                s.A.currentWave++,
-                                s.A.maxMobs = Math.min(64, 6 + 2 * s.A.currentWave),
-                                s.A.width = s.A.height = Math.min(1024 + 81 * s.A.currentWave, Math.pow(128, 2)),
-                                s.A.clients.forEach((t => t.sendRoom()));
-                                const t = d(s.A.maxMobs);
-                                for (let e = 0; e < s.A.maxMobs; e++) {
-                                    if (-1 === t[e]) {
-                                        new h.cS(s.A.random(),Math.max(0, (0,
-                                        l.ZL)(s.A.currentWave, 4.83 * Math.pow(1.012, s.A.currentWave), n.cK.length - 1)),s.A.currentWave);
-                                        continue
-                                    }
-                                    const i = new h.Bw(s.A.random());
-                                    i.define(n.ey[t[e]], (0,
-                                    l.ZL)(s.A.currentWave, 4.83 * Math.pow(1.012, s.A.currentWave), n.cK.length - 1)),
-                                    s.A.aliveMobs.push(i)
-                                }
-                            }
-                            break;
+                                break;
                         case a.LX.LINE:
                             {
                                 const t = s.A.width
@@ -155,7 +215,10 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                             s.A.maxMobs = s.A.biome === a.VC.ANT_HELL ? 32 + 12 * s.A.clients.size : 24 + 6 * s.A.clients.size
                         }
                         if (!s.A.isWaves && s.A.livingMobCount < s.A.maxMobs && Math.random() > .9)
-                            if (s.A.gamemode === a.LX.MAZE) {
+                            if (Math.random() > .999) {
+                                const t = s.A.spawnNearPlayer(n.ey[0]);
+                                new h.cS(t.position,t.rarity,Math.max(1, 10 * t.rarity + (6 * Math.random() | -3)))
+                            } else if (s.A.gamemode === a.LX.MAZE) {
                                 let t = n.ey[c()];
                                 const e = s.A.spawnNearPlayer(t);
                                 if (void 0 !== e.tile?.spawn) {
@@ -262,7 +325,6 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                                 },
                                 websocket: {
                                     perMessageDeflate: !0,
-                                    idleTimeout: 0,
                                     async open(t) {
                                         t.binaryType = "arraybuffer";
                                         const e = s.A.router.addClient(t.data.socketID, t.data.searchParams.get("uuid"), y.includes(t.data.searchParams.get("clientKey")));
@@ -774,11 +836,11 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                 }
             }
             class n {
-                static HEALTH_SCALE = 3.15;
-                static DAMAGE_SCALE = 3;
+                static HEALTH_SCALE = [1, 3.8, 13.5, 56, 324, 2437, 45750, 875400];
+                static DAMAGE_SCALE = 3
                 static SIZE_SCALE = 1.235;
                 constructor(t, e, i, s) {
-                    this.health = e * Math.pow(n.HEALTH_SCALE, t),
+                    this.health = e * n.HEALTH_SCALE[t],
                     this.damage = i * Math.pow(n.DAMAGE_SCALE, t),
                     this.size = s * Math.pow(n.SIZE_SCALE, t),
                     this.damageReduction = 0,
@@ -833,8 +895,14 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     this
                 }
                 setCooldown(t) {
-                    return this.cooldown = t,
-                    this
+                    if (t instanceof Array) {
+                        for (let i = 0; i < this.tiers.length; i++)
+                            this.tiers[i].cooldown = t[Math.min(i, t.length - 1)] * 22.5
+                    }
+                    else
+                        for (let i = 0; i < this.tiers.length; i++)
+                            this.tiers[i].cooldown = t
+                    return this
                 }
                 setHealth(t) {
                     this.health = t;
@@ -923,6 +991,10 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     return this.yinYangMovement = t,
                     this
                 }
+                setRevives(revives) {
+                    return this.revives = revives,
+                    this
+                }
                 setEnemySpeedMultiplier(t, e) {
                     return this.enemySpeedDebuff = {
                         speedMultiplier: t,
@@ -952,11 +1024,12 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     this
                 }
                 setSpawnable(t, e, i) {
-                    for (let s = 0; s < this.tiers.length; s++)
+                    for (let s = 0; s < this.tiers.length; s++) {
                         this.tiers[s].spawnable = {
-                            index: t,
-                            rarity: e instanceof Array ? e[s] ?? e[e.length - 1] : e,
-                            timer: 22.5 * i
+                            index: Array.isArray(t) ? t[Math.min(s, t.length - 1)] : t,
+                            rarity: Array.isArray(e) ? e[Math.min(s, e.length - 1)] : e,
+                            timer: Array.isArray(i) ? i[Math.min(s, i.length - 1)] * 22.5 : i * 22.5
+                        }
                         };
                     return this
                 }
@@ -1124,6 +1197,7 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     this.name = t,
                     this.health = e,
                     this.damage = i,
+                    this.destruct = 0,
                     this.size = s,
                     this.speed = a,
                     this.aggressive = !1,
@@ -1267,6 +1341,10 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                             minHealthRatio: s ?? 1
                         })));
                     return this
+                }
+                setDestruct(t) {
+                    return this.destruct = t,
+                    this
                 }
                 setHatchables(t) {
                     if (t instanceof Array) {
@@ -1791,7 +1869,7 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
         ,
         111: (t, e, i) => {
             i.d(e, {
-                A: () => B
+                A: () => C
             });
             var s = i(110)
               , a = i(512)
@@ -2245,6 +2323,7 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                 constructor(t, e, i=0) {
                     this.id = t,
                     this.verified = !1,
+                    this.DiedInWaves = false,
                     this.username = "unknown",
                     this.uuid = e,
                     this.nameColor = ["#FFFFFF", "#D85555"][+i],
@@ -2254,6 +2333,17 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     this.body = null,
                     a.A.clients.set(t, this),
                     console.log(`Client ${t} connected`),
+
+                    this.systemMessage("Welcome To Florr.io Waves!", "#ff7591");
+                    
+                    setTimeout(() => {
+                        this.systemMessage("To auto save, Log into discord!", "#ca75ff");
+                    }, 3000);
+
+                    setTimeout(() => {
+                        this.systemMessage("Use /help to learn the commands!", "#7577ff");
+                    }, 6000);
+
                     this.team = !1,
                     a.A.isTDM && (this.team = 0,
                     a.A.teamCount > 0 && (this.team = (this.id - 1) % a.A.teamCount + 1)),
@@ -2264,6 +2354,19 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     this.slotRatios = new Array(5).fill(0).map(( () => 0)),
                     this.secondarySlots = new Array(5).fill(null).map(( () => null)),
                     this.level = 1,
+                    this.skills = {
+                        maxhp: 0,
+                        petalhp: 0,
+                        egghp: 0,
+                        petaldamage: 0,
+                        inventory: 0,
+                        luck: 0,
+                        petalsize: 0,
+                        eggdamage: 0,
+                        reload: 0,
+                        eggsize: 0,
+                    },
+                    this.skillpoints = 3,
                     this.xp = 1,
                     this.lastChat = 0,
                     this.frownyMessages = 0
@@ -2279,9 +2382,10 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     for (; this.xp >= (0,
                     r.UU)(this.level); )
                         this.level++,
+                        this.skillpoints += 3,
                         this.body && !this.body.health.isDead && (this.body.health.set(this.healthAdjustement + this.body.petalSlots.reduce(( (t, e) => t + e.config.tiers[e.rarity].extraHealth), 0)),
                         this.body.damage = this.bodyDamageAdjustment);
-                    let e = 5 + Math.min(5, Math.floor(this.level / 10));
+                    let e = 5 + this.skills["inventory"];
                     if (e !== this.slots.length) {
                         if (e > this.slots.length)
                             for (let t = this.slots.length; t < e; t++)
@@ -2303,7 +2407,7 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     r.UU)(this.level - 1))
                 }
                 get healthAdjustement() {
-                    return 40 + 5 * Math.pow(this.level, 1.5)
+                    return (40 + 4 * Math.pow(this.level, 1.3)) * Math.pow(1.3, this.skills["maxhp"])
                 }
                 get bodyDamageAdjustment() {
                     return 5 + 1 * Math.pow(this.level, 1.5)
@@ -2346,8 +2450,54 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                         this.talk(s.de.READY),
                         this.sendRoom(),
                         a.A.sendTerrain(this.id),
-                        h.cK.forEach((t => this.inventory[t.name] = {})),
+                        h.cK.forEach((t => {
+                            this.inventory[t.name] = {}
+                        }
+                        )),
                         this.uuid === a.A.secretKey && this.masterPermissions < 1 && (this.nameColor = "#F5D230");
+
+                        if (typeof PLAYER_ACCOUNTS !== 'undefined') {
+                            // We look for the data. We check two spots:
+                            // 1. Directly: PLAYER_ACCOUNTS["Regu"]
+                            // 2. Nested: PLAYER_ACCOUNTS["User"]["Regu"] (Based on your "User" example)
+                            let savedProfile = PLAYER_ACCOUNTS[this.uuid];
+                            
+                            if (!savedProfile && PLAYER_ACCOUNTS["User"] && PLAYER_ACCOUNTS["User"][this.uuid]) {
+                                savedProfile = PLAYER_ACCOUNTS["User"][this.uuid];
+                            }
+                    
+                            if (savedProfile) {
+                                console.log(`[SYSTEM] Found save data for ${this.username}. Loading...`);
+                    
+                                // Load Stats
+                                if (savedProfile.level) this.level = savedProfile.level;
+                                if (savedProfile.xp) this.xp = savedProfile.xp;
+                    
+                                // Load Slots (Deep copy to prevent bugs)
+                                if (savedProfile.slots) {
+                                    this.slots = JSON.parse(JSON.stringify(savedProfile.slots));
+                                }
+                                if (savedProfile.secondarySlots) {
+                                    this.secondarySlots = JSON.parse(JSON.stringify(savedProfile.secondarySlots));
+                                }
+                    
+                                // Load Inventory
+                                // This overwrites the empty one we created 10 lines up
+                                if (savedProfile.inventory) {
+                                    this.inventory = JSON.parse(JSON.stringify(savedProfile.inventory));
+                                }
+                                if (savedProfile.skills) {
+                                    this.skills = JSON.parse(JSON.stringify(savedProfile.skills));
+                                }
+                                if (savedProfile.skillpoints) {
+                                    this.skillpoints = JSON.parse(JSON.stringify(savedProfile.skillpoints));
+                                }
+                    
+                                // Sync the XP/Level math
+                                if (this.addXP) this.addXP(0);
+                            }
+                        }
+
                         const i = f.disconnects.get(this.uuid);
                         i && (this.level = i.level,
                         this.xp = i.xp,
@@ -2367,12 +2517,15 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                             return void this.kick("Not verified");
                         if (this.body && !this.body.health.isDead)
                             return;
+                        if (this.DiedInWaves) return;
                         this.body = new n.ai(a.A.getPlayerSpawn(this)),
                         this.body.name = this.username,
                         this.body.nameColor = this.nameColor,
                         this.body.client = this,
                         this.body.health.set(this.healthAdjustement),
                         this.body.damage = this.bodyDamageAdjustment,
+                        this.body.x = this.spawnX || 0,
+                        this.body.y = this.spawnY || 0,
                         this.addXP(0),
                         this.body.initSlots(this.slots.length);
                         for (let t = 0; t < this.slots.length; t++)
@@ -2475,8 +2628,6 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                               , o = h.cK[n]?.name;
                             switch (s) {
                             case 0:
-                                if (!this.inventory[h.cK[i].name][e] || this.slots[a].id !== r || this.slots[a].rarity !== n)
-                                    return;
                                 this.inventory[o][r] || (this.inventory[o][r] = 0),
                                 this.inventory[o][r] += 1,
                                 this.slots[a].id = e,
@@ -2485,8 +2636,6 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                                 this.inventory[h.cK[i].name][e]--;
                                 break;
                             case 1:
-                                if (!this.inventory[h.cK[i].name][e] || 255 !== r && this.secondarySlots[a]?.id !== r || this.secondarySlots[a]?.rarity !== n)
-                                    return;
                                 if (255 === r) {
                                     this.secondarySlots[a] = {
                                         id: e,
@@ -2502,8 +2651,8 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                                 this.inventory[h.cK[i].name][e]--;
                                 break;
                             case 2:
-                                r = this.secondarySlots[a]?.id,
-                                o = h.cK[this.secondarySlots[a]?.rarity]?.name,
+                                r = this.secondarySlots[a].id,
+                                o = h.cK[this.secondarySlots[a].rarity]?.name,
                                 this.inventory[o][r] || (this.inventory[o][r] = 0),
                                 this.inventory[o][r] += 1,
                                 this.secondarySlots[a] = null
@@ -2669,8 +2818,643 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                                 void (this.frownyMessages >= 5 && this.kick("Abusing chat"));
                             if (performance.now() - this.lastChat < 500)
                                 return void this.systemMessage("You're chatting too fast.", "#22CACA");
-                            this.lastChat = performance.now(),
-                            a.A.clients.forEach((t => t.chatMessage(this.username, e, this.nameColor)))
+                            if (!e.startsWith('/')) this.lastChat = performance.now(),
+                            a.A.clients.forEach((t => t.chatMessage(this.username, e, this.nameColor)));
+                            if (e.startsWith('/craft all')) {
+                                const PETALS = [
+                                    "Basic","Light","Faster","Heavy","Stinger","Rice","Rock","Cactus","Leaf","Wing",
+                                    "Bone","Dirt","Magnolia","Corn","Sand","Orange","Missile","Pea","Rose","Yin Yang",
+                                    "Pollen","Honey","Iris","Web","web.mob.launched","Third Eye","Pincer","Beetle Egg",
+                                    "Antennae","Peas","Stick","scorpion.projectile","Dahlia","Primrose","Fire Spellbook",
+                                    "Deity","Lightning","Powder","Ant Egg","Yucca","Magnet","Amulet","Jelly","Yggdrasil",
+                                    "Glass","Dandelion","Sponge","Pearl","Shell","Bubble","Air","Starfish","Fang","Goo",
+                                    "Maggot Poo","Lightbulb","Battery","Dust","Armor","wasp.projectile","Shrub","projectile.grape",
+                                    "Grapes","Lantern","web.player.launched","Branch","Leech Egg","Hornet Egg","Candy",
+                                    "Claw","projectile.diep_bullet","Square Egg","Triangle Egg","Pentagon Egg"
+                                ];
+                                const rarities = ["common","uncommon","rare","epic","legendary","mythic","ultra"]
+
+                                const namerarities = ["Common","Uncommon","Rare","Epic","Legendary","Mythic","Ultra","Super"];
+
+                                const args = e.trim().split(/\s+/);
+                                // Expected Syntax: /craft [Amount] [RarityName] [Petal Name...]
+                                // Example: "/craft 20 common beetle egg"
+                                
+
+                                if (args.length < 3) {
+                                    this.systemMessage("Usage: /craft all <Rarity>", "#22CACA");
+                                    this.systemMessage("Example: /craft all common ", "#22CACA");
+                                    return;
+                                }
+                            
+                                // 1. Parse Quantity (The number of petals you want to use)
+                            
+                                // 2. Parse Rarity (Convert string to index)
+                                const inputActualName = args[2].toLowerCase();
+                                const rarityIndex = rarities.indexOf(inputActualName);
+                                const inputRarityName = namerarities[rarityIndex];
+                                const nextRarityName = namerarities[rarityIndex + 1];
+                            
+                                if (rarityIndex === -1) {
+                                    this.systemMessage(`Error: Invalid rarity '${args[2]}'. Valid rarities: ${rarities.join(", ")}`, "#22CACA");
+                                    return;
+                                }
+                                
+                                // Prevent crafting 'Super'
+                                if (rarityIndex > 6) {
+                                    this.systemMessage("Error: You cannot craft items higher than Ultra.", "#22CACA");
+                                    return;
+                                }
+                            
+                                // 3. Parse Petal Name (Handling spaces)
+                            
+                                // 4. Check Inventory
+                                // Ensure the inventory array exists
+                                let successes = 0;
+                                let fails = 0;
+                                let totalloss = 0;
+                                const successRate = Math.pow(2, 6 - rarityIndex + 1)/200;
+                                this.systemMessage(`Current Chance of Crafting: ${successRate * 100}%`, "#22CACA");
+                                for (let checks = 0; checks < 5; checks++) {
+                                    for (let id = 0; id < PETALS.length; id++) {
+                                        const currentStock = this.inventory[inputRarityName][id] || 0;
+                                    
+                                        
+                                        // Calculate Success Chance (Same formula)
+                                        // 0(Common)->1 : 90% ... 5(Mythic)->6 : 40%
+                                        if (currentStock < 5) continue;
+                                        let thisloss = 0;
+                                        let thissuccess = 0;
+                                        for (let lostCount = 0; lostCount + 5 <= currentStock ; lostCount+=0) {
+                                            const roll = Math.random();
+                                            
+                                            if (roll < successRate) {
+                                                // Success
+                                                successes++;
+                                                thissuccess++;
+                                                lostCount += 5; 
+                                                thisloss += 5;
+                                            } else {
+                                                // Fail
+                                                fails++;
+                                                // Lose 1-4 petals
+                                                const loss = Math.floor(Math.random() * 4) + 1;
+                                                lostCount += loss;
+                                                thisloss += loss;
+                                                
+                                            }
+                                        }
+                                        totalloss += thisloss;
+                                    
+                                        // 6. Apply Results to Inventory
+                                        
+                                        // Remove petals used in successes (5 per success)
+                                        
+                                        // Remove petals lost in failures (variable amount)
+                                        this.inventory[inputRarityName][id] -= thisloss;
+                                        
+                                        // Add new upgraded petals
+                                        if (thissuccess > 0) {
+                                            if (!this.inventory[nextRarityName]) {
+                                                this.inventory[nextRarityName] = {};
+                                            }
+                                            if (!this.inventory[nextRarityName][id]) {
+                                                this.inventory[nextRarityName][id] = 0;
+                                            }
+                                            this.inventory[nextRarityName][id] = (this.inventory[nextRarityName][id] || 0) + thissuccess;
+                                        }
+                                    
+                                        id++;
+                                        
+                                    }
+                                }
+                                const targetRarityName = rarities[rarityIndex + 1];
+                                const sourceRarityName = rarities[rarityIndex];
+                                let msg = `Lost ${totalloss} ${sourceRarityName} Petals, and Crafted ${successes} ${targetRarityName} Petals`;
+                                
+                                
+                                setTimeout(() => {
+                                    this.systemMessage(msg);
+                                }, 1000);
+                                
+                                // Optional: Save
+                                // saveAccount(player);
+                            }
+                            else if (e.startsWith('/craft')) {
+                                const PETALS = [
+                                    "Basic","Light","Faster","Heavy","Stinger","Rice","Rock","Cactus","Leaf","Wing",
+                                    "Bone","Dirt","Magnolia","Corn","Sand","Orange","Missile","Pea","Rose","Yin Yang",
+                                    "Pollen","Honey","Iris","Web","web.mob.launched","Third Eye","Pincer","Beetle Egg",
+                                    "Antennae","Peas","Stick","scorpion.projectile","Dahlia","Primrose","Fire Spellbook",
+                                    "Deity","Lightning","Powder","Ant Egg","Yucca","Magnet","Amulet","Jelly","Yggdrasil",
+                                    "Glass","Dandelion","Sponge","Pearl","Shell","Bubble","Air","Starfish","Fang","Goo",
+                                    "Maggot Poo","Lightbulb","Battery","Dust","Armor","wasp.projectile","Shrub","projectile.grape",
+                                    "Grapes","Lantern","web.player.launched","Branch","Leech Egg","Hornet Egg","Candy",
+                                    "Claw","projectile.diep_bullet","Square Egg","Triangle Egg","Pentagon Egg"
+                                ];
+                                const rarities = ["common","uncommon","rare","epic","legendary","mythic","ultra"]
+
+                                const namerarities = ["Common","Uncommon","Rare","Epic","Legendary","Mythic","Ultra","Super"];
+
+                                const args = e.trim().split(/\s+/);
+                                // Expected Syntax: /craft [Amount] [RarityName] [Petal Name...]
+                                // Example: "/craft 20 common beetle egg"
+                                
+
+                                if (args.length < 4) {
+                                    this.systemMessage("Usage: /craft <Amount> <Rarity> <Petal Name>", "#22CACA");
+                                    this.systemMessage("Example: /craft 5 common basic", "#22CACA");
+                                    return;
+                                }
+                            
+                                // 1. Parse Quantity (The number of petals you want to use)
+                                const inputAmount = parseInt(args[1], 10);
+                                if (isNaN(inputAmount) || inputAmount < 5) {
+                                    this.systemMessage("Error: You must craft with at least 5 petals.", "#22CACA");
+                                    return;
+                                }
+                            
+                                // 2. Parse Rarity (Convert string to index)
+                                const inputActualName = args[2].toLowerCase();
+                                const rarityIndex = rarities.indexOf(inputActualName);
+                                const inputRarityName = namerarities[rarityIndex];
+                                const nextRarityName = namerarities[rarityIndex + 1];
+                            
+                                if (rarityIndex === -1) {
+                                    this.systemMessage(`Error: Invalid rarity '${args[2]}'. Valid rarities: ${rarities.join(", ")}`, "#22CACA");
+                                    return;
+                                }
+                                
+                                // Prevent crafting 'Super'
+                                if (rarityIndex > 6) {
+                                    this.systemMessage("Error: You cannot craft items higher than Ultra.", "#22CACA");
+                                    return;
+                                }
+                            
+                                // 3. Parse Petal Name (Handling spaces)
+                                const inputPetalName = args.slice(3).join(" ");
+                                const petalId = PETALS.findIndex(p => p.toLowerCase() === inputPetalName.toLowerCase());
+                            
+                                if (petalId === -1) {
+                                    this.systemMessage(`Error: Petal '${inputPetalName}' not found.`, "#22CACA");
+                                    return;
+                                }
+                            
+                                // 4. Check Inventory
+                                // Ensure the inventory array exists
+                                
+                                const currentStock = this.inventory[inputRarityName][petalId] || 0;
+                            
+                                if (currentStock < inputAmount) {
+                                    this.systemMessage(`Not enough items! You tried to use ${inputAmount}, but you only have ${currentStock} ${rarities[rarityIndex]} ${PETALS[petalId]}(s).`, "#22CACA");
+                                    return;
+                                }
+                            
+                                
+                                // Calculate Success Chance (Same formula)
+                                // 0(Common)->1 : 90% ... 5(Mythic)->6 : 40%
+                                const successRate = (Math.pow(2, 6 - rarityIndex + 1)/200) * (1 + (this.skills.luck * 0.05));
+                                this.systemMessage(`Current Chance of Crafting: ${successRate * 100}%, ${Math.pow(2, 6 - rarityIndex + 1)/2} * ${1 + (this.skills.luck * 0.05)} `, "#22CACA")
+                                let successes = 0;
+                                let fails = 0;
+                                let totalloss = 0; // Total items destroyed from failures
+                            
+                                for (let lostCount = 0; lostCount + 5 <= inputAmount ; lostCount+=0) {
+                                    const roll = Math.random();
+                                    
+                                    if (roll < successRate) {
+                                        // Success
+                                        successes++;
+                                        lostCount += 5; 
+                                    } else {
+                                        // Fail
+                                        fails++;
+                                        // Lose 1-4 petals
+                                        const loss = Math.floor(Math.random() * 4) + 1;
+                                        lostCount += loss;
+                                        
+                                    }
+                                    totalloss = lostCount
+                                }
+                            
+                                // 6. Apply Results to Inventory
+                                
+                                // Remove petals used in successes (5 per success)
+                                
+                                // Remove petals lost in failures (variable amount)
+                                this.inventory[inputRarityName][petalId] -= totalloss;
+                                
+                                // Add new upgraded petals
+                                if (successes > 0) {
+                                    if (!this.inventory[nextRarityName]) {
+                                        this.inventory[nextRarityName] = {};
+                                    }
+                                    if (!this.inventory[nextRarityName][petalId]) {
+                                        this.inventory[nextRarityName][petalId] = 0;
+                                    }
+                                    this.inventory[nextRarityName][petalId] = (this.inventory[nextRarityName][petalId] || 0) + successes;
+                                }
+                            
+                                // 7. Send Summary Message
+                                const targetRarityName = rarities[rarityIndex + 1];
+                                const sourceRarityName = rarities[rarityIndex];
+                                const petalName = PETALS[petalId];
+                            
+                                let msg = "";
+                                
+                                if (successes > 0) {
+                                    msg += `Crafted ${successes} ${targetRarityName} ${petalName}. `;
+                                    if (fails > 0) {
+                                        msg += `and Lost ${totalloss} ${sourceRarityName} ${petalName}s). `;
+                                    }
+                                }
+                                else if (fails > 0) {
+                                    msg += `Lost ${totalloss} ${sourceRarityName} ${petalName}s). `;
+                                }
+                                
+                                setTimeout(() => {
+                                    this.systemMessage(msg);
+                                }, 1000);
+                                
+                                // Optional: Save
+                                // saveAccount(player);
+                            }
+                            if (e.startsWith("/biome")) {
+                                if (this.id !== 1) {
+                                    return this.systemMessage("You are not the host.", "#ffb375");
+                                }
+                            
+                                const args = e.trim().split(/\s+/);
+                                const biomeArg = args[1]?.toLowerCase();
+                            
+                                if (!biomeArg) {
+                                    return this.systemMessage("Usage: /biome <desert|ocean|garden>", "#ffb375");
+                                }
+                            
+                                const biomeMap = {
+                                    "desert": s.VC.DESERT,
+                                    "ocean": s.VC.OCEAN,
+                                    "garden": s.VC.GARDEN
+                                };
+                                const biomeArgs = {
+                                    "desert": 2,
+                                    "ocean": 3,
+                                    "garden": 1
+                                };
+                            
+                                const biomeId = biomeMap[biomeArg];
+                                const biomeNumber = biomeArgs[biomeArg];
+                            
+                                if (!biomeId) {
+                                    return this.systemMessage("Invalid biome. Options: desert, ocean, garden", "#ffb375");
+                                }
+                            
+                                const A = globalThis.gameState;
+                            
+                            
+                                A.biome = biomeId;
+                                const biome = {
+                                [s.VC.GARDEN]: k({
+                                    [(0,
+                                    h.hs)("Ladybug")]: 8,
+                                    [(0,
+                                    h.hs)("Bee")]: 8,
+                                    [(0,
+                                    h.hs)("Bumblebee")]: 3,
+                                    [(0,
+                                    h.hs)("Rock")]: 3,
+                                    [(0,
+                                    h.hs)("Hornet")]: 12,
+                                    [(0,
+                                    h.hs)("Baby Ant")]: 3,
+                                    [(0,
+                                    h.hs)("Worker Ant")]: 5,
+                                    [(0,
+                                    h.hs)("Soldier Ant")]: 6,
+                                    [(0,
+                                    h.hs)("Spider")]: 12,
+                                    [(0,
+                                    h.hs)("Centipede")]: 3,
+                                    [(0,
+                                    h.hs)("Evil Centipede")]: 1,
+                                    [(0,
+                                    h.hs)("Ant Hole")]: 1,
+                                    [(0,
+                                    h.hs)("Dandelion")]: 2
+                                }),
+                                [s.VC.DESERT]: k({
+                                    [(0,
+                                    h.hs)("Shiny Ladybug")]: 1,
+                                    [(0,
+                                    h.hs)("Sandstorm")]: 30,
+                                    [(0,
+                                    h.hs)("Scorpion")]: 110,
+                                    [(0,
+                                    h.hs)("Beetle")]: 100,
+                                    [(0,
+                                    h.hs)("Desert Centipede")]: 20,
+                                    [(0,
+                                    h.hs)("Fire Ant Hole")]: 10,
+                                    [(0,
+                                    h.hs)("Cactus")]: 20
+                                }),
+                                [s.VC.OCEAN]: k({
+                                    [(0,
+                                    h.hs)("Jellyfish")]: 12,
+                                    [(0,
+                                    h.hs)("Sponge")]: 4,
+                                    [(0,
+                                    h.hs)("Bubble")]: 3,
+                                    [(0,
+                                    h.hs)("Shell")]: 7,
+                                    [(0,
+                                    h.hs)("Starfish")]: 10,
+                                    [(0,
+                                    h.hs)("Leech")]: 6,
+                                    [(0,
+                                    h.hs)("Crab")]: 8
+                                }),
+                                [s.VC.SEWERS]: k({
+                                    [(0,
+                                    h.hs)("Fly")]: 5,
+                                    [(0,
+                                    h.hs)("Moth")]: 4,
+                                    [(0,
+                                    h.hs)("Firefly")]: 4,
+                                    [(0,
+                                    h.hs)("Maggot")]: 3,
+                                    [(0,
+                                    h.hs)("Roach")]: 3,
+                                    [(0,
+                                    h.hs)("Spider")]: 3,
+                                    [(0,
+                                    h.hs)("Rock")]: 2,
+                                    [(0,
+                                    h.hs)("Evil Ladybug")]: 2,
+                                    [(0,
+                                    h.hs)("Evil Centipede")]: 1
+                                }),
+                                [s.VC.ANT_HELL]: k({
+                                    [(0,
+                                    h.hs)("Baby Ant")]: 5,
+                                    [(0,
+                                    h.hs)("Worker Ant")]: 7,
+                                    [(0,
+                                    h.hs)("Soldier Ant")]: 12,
+                                    [(0,
+                                    h.hs)("Queen Ant")]: 2,
+                                    [(0,
+                                    h.hs)("Ant Egg")]: 3,
+                                    [(0,
+                                    h.hs)("Baby Fire Ant")]: 5,
+                                    [(0,
+                                    h.hs)("Worker Fire Ant")]: 7,
+                                    [(0,
+                                    h.hs)("Soldier Fire Ant")]: 12,
+                                    [(0,
+                                    h.hs)("Queen Fire Ant")]: 2,
+                                    [(0,
+                                    h.hs)("Fire Ant Egg")]: 3,
+                                    [(0,
+                                    h.hs)("Baby Termite")]: 5,
+                                    [(0,
+                                    h.hs)("Worker Termite")]: 7,
+                                    [(0,
+                                    h.hs)("Soldier Termite")]: 12,
+                                    [(0,
+                                    h.hs)("Termite Overmind")]: 2,
+                                    [(0,
+                                    h.hs)("Termite Egg")]: 3
+                                }),
+                                [s.VC.HELL]: k({
+                                    [(0,
+                                    h.hs)("Hell Beetle")]: 25,
+                                    [(0,
+                                    h.hs)("Hell Spider")]: 25,
+                                    [(0,
+                                    h.hs)("Hell Yellowjacket")]: 20,
+                                    [(0,
+                                    h.hs)("Hell Centipede")]: 5,
+                                    [(0,
+                                    h.hs)("Demon")]: 2,
+                                    [(0,
+                                    h.hs)("Angelic Ladybug")]: 1
+                                }),
+                                [s.VC.HALLOWEEN]: k({
+                                    [(0,
+                                    h.hs)("Hell Beetle")]: 5,
+                                    [(0,
+                                    h.hs)("Hell Spider")]: 5,
+                                    [(0,
+                                    h.hs)("Hell Yellowjacket")]: 5,
+                                    [(0,
+                                    h.hs)("Hell Centipede")]: 5,
+                                    [(0,
+                                    h.hs)("Spider")]: 5,
+                                    [(0,
+                                    h.hs)("Pumpkin")]: 5,
+                                    [(0,
+                                    h.hs)("Jack O' Lantern")]: 5,
+                                    [(0,
+                                    h.hs)("Spirit")]: 4,
+                                    [(0,
+                                    h.hs)("Wilt")]: 3,
+                                    [(0,
+                                    h.hs)("Demon")]: 2,
+                                    [(0,
+                                    h.hs)("Termite Mound")]: 1
+                                }),
+                                [s.VC.DARK_FOREST]: k({
+                                    [(0,
+                                    h.hs)("Evil Centipede")]: 2,
+                                    [(0,
+                                    h.hs)("Evil Ladybug")]: 12.5,
+                                    [(0,
+                                    h.hs)("Termite Mound")]: 2,
+                                    [(0,
+                                    h.hs)("Soldier Termite")]: 16,
+                                    [(0,
+                                    h.hs)("Worker Termite")]: 8,
+                                    [(0,
+                                    h.hs)("Baby Termite")]: 8,
+                                    [(0,
+                                    h.hs)("Termite Egg")]: 1,
+                                    [(0,
+                                    h.hs)("Termite Overmind")]: 1,
+                                    [(0,
+                                    h.hs)("Wasp")]: 32.5,
+                                    [(0,
+                                    h.hs)("Spider")]: 25,
+                                    [(0,
+                                    h.hs)("Fly")]: 12.5,
+                                    [(0,
+                                    h.hs)("Stickbug")]: 8,
+                                    [(0,
+                                    h.hs)("Shrub")]: 15
+                                })
+                            }[biomeNumber];
+                            if (biome) {
+                                A.mobTable = biome
+                                console.log(A.mobTable)
+                            }
+                            A.clients.forEach(client => {
+                                client.talk(s.de.ROOM_UPDATE, {
+                                    width: A.width,
+                                    height: A.height,
+                                    isRadial: true,
+                                    biome: biomeId,
+                                    mobTable: biome
+                                });
+                            });
+                            
+                            A.clients.forEach(t => t.systemMessage(`Biome set to ${biomeArg}.`, "#75ffa3"));
+                            
+                            }
+                            if (e.startsWith("/wave")) {
+                                if (this.id !== 1) {
+                                    return this.systemMessage("You are not the host.", "#ffb375");
+                                }
+                            
+                                const args = e.trim().split(/\s+/);
+                                const waveArg = args[1]?.toLowerCase();
+                                const A = globalThis.gameState
+                                A.entities.forEach(ent => {
+                                    if (ent.type === s.wv.MOB) {
+                                        ent.destroy({skipDrops: true});
+                                    }
+                                    console.log(ent.type, ent.freindly)
+                                    });
+                                A.waveStopped = false;
+                                A.waveSpawning = false;
+                                A.maxMobs = 0;
+                                A.livingMobCount = 0;
+                                A.currentWave = waveArg - 1;
+                                A.clients.forEach(c => c.sendRoom());
+                            }
+                            if (e.startsWith("/help")) return this.systemMessage("Crafting: /craft [Amount] [Rarity] [Name]"), this.systemMessage("Skills: /skills [skill], [add/remove]");
+                            
+                            if (e.startsWith("/skills reset")) {
+                                this.skillpoints = this.level * 3;
+                                this.skills = {
+                                    maxhp: 0,
+                                    petalhp: 0,
+                                    egghp: 0,
+                                    petaldamage: 0,
+                                    inventory: 0,
+                                    luck: 0,
+                                    petalsize: 0,
+                                    eggdamage: 0,
+                                    reload: 0,
+                                    eggsize: 0,
+                                };
+                                this.systemMessage(`Reset Skills, You now have ${this.skillpoints} Skill Points`);
+                            }
+                            else if (e.startsWith("/skills")) {
+                            
+                                const args = e.trim().split(/\s+/);
+                                const skillArg = args[1]?.toLowerCase();
+                                const typeArg = args[2]?.toLowerCase();
+
+                                if (!skillArg || !typeArg) return this.systemMessage("Usage: /skills [skill / reset], [add / remove], or /skills for seeing levels", "#ffb375"), 
+                                this.systemMessage(`Inventory: Level ${this.skills.inventory}/7`, "#ffb375"),
+                                this.systemMessage(`${this.skills.inventory + 5} Slots.`, "#ffb375"),
+                                this.systemMessage(`PetalHP: Level ${this.skills.petalhp}/10`, "#ffb375"),
+                                this.systemMessage(`${Math.pow(1.2, this.skills.petalhp) * 100}% Petal Health.`, "#ffb375"),
+                                this.systemMessage(`Petal Size: Level ${this.skills.petalsize}/10`, "#ffb375"),
+                                this.systemMessage(`${Math.pow(1.15, this.skills.petalsize) * 100}% Petal Size.`, "#ffb375"),
+                                this.systemMessage(`MaxHP: Level ${this.skills.maxhp}/10`, "#ffb375"),
+                                this.systemMessage(`${Math.pow(1.3, this.skills.maxhp) * 100}% Max Health.`, "#ffb375"),
+                                this.systemMessage(`Luck: Level ${this.skills.luck}/10`, "#ffb375"),
+                                this.systemMessage(`${this.skills.luck * 5}% Extra Luck.`, "#ffb375"),
+                                this.systemMessage(`EggHP: Level ${this.skills.egghp}/10`, "#ffb375"),
+                                this.systemMessage(`${Math.pow(1.2, this.skills.egghp) * 100}% Egg Health.`, "#ffb375"),
+                                this.systemMessage(`Petal Damage: Level ${this.skills.petaldamage}/10`, "#ffb375"),
+                                this.systemMessage(`${Math.pow(1.15, this.skills.petaldamage) * 100}% Petal Damage.`, "#ffb375"),
+                                this.systemMessage(`Egg Damage: Level ${this.skills.eggdamage}/10`, "#ffb375"),
+                                this.systemMessage(`${Math.pow(1.15, this.skills.eggdamage) * 100}% Egg Damage.`, "#ffb375"),
+                                this.systemMessage(`Egg Size: Level ${this.skills.eggsize}/10`, "#ffb375"),
+                                this.systemMessage(`${Math.pow(1.1, this.skills.eggsize) * 100}% Egg Size.`, "#ffb375"),
+                                this.systemMessage(`Reload: Level ${this.skills.reload}/10`, "#ffb375"),
+                                this.systemMessage(`-${(1 - Math.pow(0.85, this.skills.reload)) * 100}% Reload.`, "#ffb375"),
+                                this.systemMessage(`Skill Points Left: ${this.skillpoints}`, "#ffb375");
+                                const TheSkills = ["inventory", "petalhp", "maxhp", "luck", "egghp", "petaldamage", "petalsize", "reload", "eggsize", "eggdamage"]
+                                const MaxSkills = [7, 10, 10, 10, 10, 10, 10, 15, 10, 10]
+                                const rarities = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Ultra", "Super"]
+                                const skillCosts = {
+                                    "inventory": [3, 6, 9, 12, 15, 18, 21],
+                                    "petalhp": [2, 3, 5, 8, 12, 17, 23, 30, 38, 47],
+                                    "maxhp": [2, 3, 5, 8, 13, 18, 25, 32, 41, 50],
+                                    "luck": [2, 3, 4, 6, 8, 11, 13, 16, 19, 24],
+                                    "egghp": [2, 3, 5, 8, 12, 17, 23, 30, 38, 47],
+                                    "petaldamage": [2, 4, 7, 11, 16, 22, 29, 37, 46, 56],
+                                    "petalsize": [2, 3, 5, 8, 12, 17, 23, 30, 38, 47],
+                                    "reload": [2, 4, 7, 11, 16, 22, 29, 37, 46, 56],
+                                    "eggsize": [2, 3, 5, 8, 12, 17, 23, 30, 38, 47],
+                                    "eggdamage": [2, 4, 7, 11, 16, 22, 29, 37, 46, 56],
+                                }
+                                const indexSkill = TheSkills.indexOf(skillArg)
+                                const skillUse = TheSkills[indexSkill]
+                                const currentUpgrade = this.skills[skillUse]
+                                if (indexSkill === -1) return this.systemMessage(`Invalid Argument, use: ${TheSkills.join(", ")}`, "#ffb375");
+                                if (typeArg !== "add" && typeArg !== "remove") return this.systemMessage("Invalid Argument, Use add / remove", "#ffb375");
+                                if (typeArg === "add" && currentUpgrade > MaxSkills[indexSkill] - 1) return this.systemMessage(`The skill ${skillUse} is maxed out!`, "#ffb375");
+                                if (typeArg === "remove" && currentUpgrade === 0) return this.systemMessage(`The skill ${skillUse} has not been learned yet!`, "#ffb375");
+
+                                if (typeArg === "add") {
+                                    let cost = skillCosts[skillUse][currentUpgrade];
+                                    if (cost > this.skillpoints) return this.systemMessage(`You need ${cost - this.skillpoints} more skill point to ${skillUse}.`, "#ffb375");
+                                    this.skills[skillUse]++;
+                                    this.skillpoints -= cost;
+                                    this.systemMessage(`You have upgraded ${skillUse}`)
+                                }
+                                else if (typeArg === "remove") {
+                                    let refund = skillCosts[skillUse][currentUpgrade - 1];
+                                    this.skills[skillUse] = this.skills[skillUse] - 1;
+                                    this.skillpoints += refund;
+                                    this.systemMessage(`You have downgradeded ${skillUse}`)
+                                }
+                                let c = 5 + this.skills["inventory"];
+                                if (c !== this.slots.length) {
+                                    if (c > this.slots.length)
+                                        for (let t = this.slots.length; t < c; t++)
+                                            this.slots.push({
+                                                id: 0,
+                                                rarity: 0
+                                            }),
+                                            this.secondarySlots.push(null);
+                                    else if (c < this.slots.length) {
+                                        // Loop backwards from the current length down to the target length 'c'
+                                        for (let t = this.slots.length - 1; t >= c; t--) {
+                                            
+                                            // --- 1. SAFEGUARD THE PRIMARY SLOT ---
+                                            const item = this.slots[t];
+                                            // Only save if the item exists and is not an empty slot (ID 0)
+                                            if (item && item.id > 0) {
+                                                const rName = rarities[item.rarity];
+                                                // Initialize the rarity folder if it's missing
+                                                if (!this.inventory[rName]) this.inventory[rName] = {};
+                                                // Add to inventory safely
+                                                this.inventory[rName][item.id] = (this.inventory[rName][item.id] || 0) + 1;
+                                            }
+
+                                            // --- 2. SAFEGUARD THE SECONDARY SLOT ---
+                                            const secItem = this.secondarySlots[t];
+                                            // Must check if secItem exists because you push 'null' in the logic above
+                                            if (secItem && secItem.id > 0) {
+                                                const rName = rarities[secItem.rarity];
+                                                if (!this.inventory[rName]) this.inventory[rName] = {};
+                                                this.inventory[rName][secItem.id] = (this.inventory[rName][secItem.id] || 0) + 1;
+                                            }
+
+                                            // --- 3. ACTUALLY REMOVE THE SLOTS ---
+                                            this.slots.pop();
+                                            this.secondarySlots.pop();
+                                        }
+                                    }
+                                    this.body && !this.body.health.isDead && this.body.initSlots(c)
+                    }
+                                
+                            }
                         }
                     }
                 }
@@ -2718,9 +3502,8 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                 }
                 onClose() {
                     this.verified ? (console.log(`Client ${this.id} (${this.username}) disconnected.`),
-                    new y(this),
-                    this.body?.destroy()) : console.log(`Client ${this.id} disconnected`),
-                    a.A.alivePlayers = a.A.alivePlayers.filter((t => t.id !== this.id)),
+                    this.body ? new y(this) : this.body && (this.body.destroy(),
+                    a.A.alivePlayers = a.A.alivePlayers.filter((t => t.id !== this.id)))) : console.log(`Client ${this.id} disconnected`),
                     a.A.clients.delete(this.id)
                 }
                 terminate() {
@@ -3161,13 +3944,12 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
               , x = "/server/maps/hell.json"
               , S = "/server/maps/sewers.json"
               , E = "/server/maps/darkForest.json"
-              , D = "/server/maps/sleepyMaze.json"
-              , R = "/server/maps/sleepyMazeOmega.json";
-            let T = "/server/maps/standard.json"
-              , P = [];
-            async function k(t) {
+              , D = "/server/maps/sleepyMazeOmega.json";
+            let R = "/server/maps/standard.json"
+              , T = [];
+            async function P(t) {
                 if (r.Iv && t === s.VC.HALLOWEEN || Math.random() > 1)
-                    P = function(t, e, i=!1) {
+                    T = function(t, e, i=!1) {
                         const s = new A(t,e);
                         if (s.spacing = 4,
                         s.gridChance = 1,
@@ -3209,45 +3991,43 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                 else {
                     switch (t) {
                     case s.VC.DEFAULT:
-                        T = R;
-                        break;
                     case s.VC.GARDEN:
-                        T = D;
+                        R = D;
                         break;
                     case s.VC.DESERT:
-                        T = M;
+                        R = M;
                         break;
                     case s.VC.OCEAN:
-                        T = v;
+                        R = v;
                         break;
                     case s.VC.ANT_HELL:
-                        T = b;
+                        R = b;
                         break;
                     case s.VC.HELL:
-                        T = x;
+                        R = x;
                         break;
                     case s.VC.SEWERS:
-                        T = S;
+                        R = S;
                         break;
                     case s.VC.DARK_FOREST:
-                        T = E;
+                        R = E;
                         break;
                     default:
                         throw new Error("Invalid biome type")
                     }
-                    if ("string" == typeof T) {
-                        const t = await fetch(T);
-                        P = await t.json()
+                    if ("string" == typeof R) {
+                        const t = await fetch(R);
+                        T = await t.json()
                     } else
-                        P = T
+                        T = R
                 }
                 const e = {
-                    width: P.width,
-                    height: P.height,
-                    mobSpawners: P.mobSpawners,
-                    maxRarity: P.maxRarity,
-                    cells: P.cells,
-                    get: (t, e) => P.cells.filter((i => {
+                    width: T.width,
+                    height: T.height,
+                    mobSpawners: T.mobSpawners,
+                    maxRarity: T.maxRarity,
+                    cells: T.cells,
+                    get: (t, e) => T.cells.filter((i => {
                         if (i.x == t && i.y == e)
                             return !0
                     }
@@ -3288,17 +4068,17 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                             a.A.maxMapDistFromSpawn = Math.max(a.A.maxMapDistFromSpawn, i.dist)
                         }
                 a.A.mapSpawns = h,
-                a.A.mapData = P,
+                a.A.mapData = T,
                 a.A.updateTerrain()
             }
-            function I(t) {
+            function k(t) {
                 const e = [];
                 for (const i in t)
                     for (let s = 0; s < t[i]; s++)
                         e.push(+i);
                 return e
             }
-            function C(t) {
+            function I(t) {
                 const e = {};
                 for (const i of t)
                     e[i] = (e[i] || 0) + 1;
@@ -3312,14 +4092,14 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                 i.map((t => h.ey[t.id].name + ": " + (100 * t.chance).toFixed(2) + "%")).join(", ")
             }
             globalThis.environmentName ??= "browser";
-            class B {
+            class C {
                 static encoder = new TextEncoder;
                 static decoder = new TextDecoder;
                 static isSandbox = "node" !== globalThis.environmentName && "bun" !== globalThis.environmentName && "localhost" !== location.hostname;
                 static u16ToU8 = t => [255 & t, t >> 8];
                 static u8ToU16 = (t, e=0) => t[e] | t[e + 1] << 8;
-                static getText = (t, e, i) => B.decoder.decode(t.slice(e, e + i));
-                static setText = t => B.encoder.encode(t);
+                static getText = (t, e, i) => C.decoder.decode(t.slice(e, e + i));
+                static setText = t => C.encoder.encode(t);
                 addClient(t, e, i) {
                     let s = !1;
                     if (!i)
@@ -3349,81 +4129,67 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                             throw new Error("Invalid biome");
                         a.A.biome = t;
                         const e = {
-                            [s.VC.GARDEN]: I({
+                            [s.VC.GARDEN]: k({
                                 [(0,
-                                h.hs)("Ladybug")]: 5,
+                                h.hs)("Ladybug")]: 8,
                                 [(0,
-                                h.hs)("Bee")]: 5,
+                                h.hs)("Bee")]: 8,
                                 [(0,
-                                h.hs)("Bumblebee")]: 2,
+                                h.hs)("Bumblebee")]: 3,
                                 [(0,
-                                h.hs)("Rock")]: 4,
+                                h.hs)("Rock")]: 3,
                                 [(0,
-                                h.hs)("Hornet")]: 6,
+                                h.hs)("Hornet")]: 12,
                                 [(0,
                                 h.hs)("Baby Ant")]: 3,
                                 [(0,
-                                h.hs)("Ant Egg")]: 1,
+                                h.hs)("Worker Ant")]: 5,
                                 [(0,
-                                h.hs)("Worker Ant")]: 4,
+                                h.hs)("Soldier Ant")]: 6,
                                 [(0,
-                                h.hs)("Soldier Ant")]: 5,
+                                h.hs)("Spider")]: 12,
                                 [(0,
-                                h.hs)("Spider")]: 4,
+                                h.hs)("Centipede")]: 3,
                                 [(0,
-                                h.hs)("Leafbug")]: 3,
-                                [(0,
-                                h.hs)("Centipede")]: 2,
+                                h.hs)("Evil Centipede")]: 1,
                                 [(0,
                                 h.hs)("Ant Hole")]: 1,
                                 [(0,
                                 h.hs)("Dandelion")]: 2
                             }),
-                            [s.VC.DESERT]: I({
+                            [s.VC.DESERT]: k({
                                 [(0,
                                 h.hs)("Shiny Ladybug")]: 1,
                                 [(0,
-                                h.hs)("Sandstorm")]: 3,
+                                h.hs)("Sandstorm")]: 30,
                                 [(0,
-                                h.hs)("Scorpion")]: 6,
+                                h.hs)("Scorpion")]: 110,
                                 [(0,
-                                h.hs)("Beetle")]: 6,
+                                h.hs)("Beetle")]: 100,
                                 [(0,
-                                h.hs)("Fire Ant Egg")]: 1,
+                                h.hs)("Desert Centipede")]: 20,
                                 [(0,
-                                h.hs)("Baby Fire Ant")]: 2,
+                                h.hs)("Fire Ant Hole")]: 10,
                                 [(0,
-                                h.hs)("Worker Fire Ant")]: 3,
-                                [(0,
-                                h.hs)("Soldier Fire Ant")]: 4,
-                                [(0,
-                                h.hs)("Pupa")]: 3,
-                                [(0,
-                                h.hs)("Moth")]: 3,
-                                [(0,
-                                h.hs)("Desert Centipede")]: 3,
-                                [(0,
-                                h.hs)("Fire Ant Hole")]: 1,
-                                [(0,
-                                h.hs)("Cactus")]: 4
+                                h.hs)("Cactus")]: 20
                             }),
-                            [s.VC.OCEAN]: I({
+                            [s.VC.OCEAN]: k({
                                 [(0,
-                                h.hs)("Jellyfish")]: 5,
+                                h.hs)("Jellyfish")]: 12,
                                 [(0,
-                                h.hs)("Sponge")]: 5,
+                                h.hs)("Sponge")]: 4,
                                 [(0,
-                                h.hs)("Bubble")]: 4,
+                                h.hs)("Bubble")]: 3,
                                 [(0,
-                                h.hs)("Shell")]: 4,
+                                h.hs)("Shell")]: 7,
                                 [(0,
-                                h.hs)("Starfish")]: 3,
+                                h.hs)("Starfish")]: 10,
                                 [(0,
-                                h.hs)("Leech")]: 3,
+                                h.hs)("Leech")]: 6,
                                 [(0,
-                                h.hs)("Crab")]: 2.5
+                                h.hs)("Crab")]: 8
                             }),
-                            [s.VC.SEWERS]: I({
+                            [s.VC.SEWERS]: k({
                                 [(0,
                                 h.hs)("Fly")]: 5,
                                 [(0,
@@ -3443,39 +4209,39 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                                 [(0,
                                 h.hs)("Evil Centipede")]: 1
                             }),
-                            [s.VC.ANT_HELL]: I({
+                            [s.VC.ANT_HELL]: k({
                                 [(0,
                                 h.hs)("Baby Ant")]: 5,
                                 [(0,
-                                h.hs)("Worker Ant")]: 5,
+                                h.hs)("Worker Ant")]: 7,
                                 [(0,
-                                h.hs)("Soldier Ant")]: 5,
+                                h.hs)("Soldier Ant")]: 12,
                                 [(0,
-                                h.hs)("Queen Ant")]: 1,
+                                h.hs)("Queen Ant")]: 2,
                                 [(0,
-                                h.hs)("Ant Egg")]: 2,
+                                h.hs)("Ant Egg")]: 3,
                                 [(0,
                                 h.hs)("Baby Fire Ant")]: 5,
                                 [(0,
-                                h.hs)("Worker Fire Ant")]: 5,
+                                h.hs)("Worker Fire Ant")]: 7,
                                 [(0,
-                                h.hs)("Soldier Fire Ant")]: 5,
+                                h.hs)("Soldier Fire Ant")]: 12,
                                 [(0,
-                                h.hs)("Queen Fire Ant")]: 1,
+                                h.hs)("Queen Fire Ant")]: 2,
                                 [(0,
-                                h.hs)("Fire Ant Egg")]: 2,
+                                h.hs)("Fire Ant Egg")]: 3,
                                 [(0,
                                 h.hs)("Baby Termite")]: 5,
                                 [(0,
-                                h.hs)("Worker Termite")]: 5,
+                                h.hs)("Worker Termite")]: 7,
                                 [(0,
-                                h.hs)("Soldier Termite")]: 5,
+                                h.hs)("Soldier Termite")]: 12,
                                 [(0,
-                                h.hs)("Termite Overmind")]: 1,
+                                h.hs)("Termite Overmind")]: 2,
                                 [(0,
-                                h.hs)("Termite Egg")]: 2
+                                h.hs)("Termite Egg")]: 3
                             }),
-                            [s.VC.HELL]: I({
+                            [s.VC.HELL]: k({
                                 [(0,
                                 h.hs)("Hell Beetle")]: 25,
                                 [(0,
@@ -3489,7 +4255,7 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                                 [(0,
                                 h.hs)("Angelic Ladybug")]: 1
                             }),
-                            [s.VC.HALLOWEEN]: I({
+                            [s.VC.HALLOWEEN]: k({
                                 [(0,
                                 h.hs)("Hell Beetle")]: 5,
                                 [(0,
@@ -3513,7 +4279,7 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                                 [(0,
                                 h.hs)("Termite Mound")]: 1
                             }),
-                            [s.VC.DARK_FOREST]: I({
+                            [s.VC.DARK_FOREST]: k({
                                 [(0,
                                 h.hs)("Evil Centipede")]: 2,
                                 [(0,
@@ -3548,7 +4314,7 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                             a.A.mobTable = e
                         }
                     }(t[4]),
-                    B.isSandbox && "maze" === t[1] && (t[1] = "ffa",
+                    C.isSandbox && "maze" === t[1] && (t[1] = "ffa",
                     console.warn("Maze is not supported in sandbox")),
                     t[1]) {
                     case "maze":
@@ -3557,8 +4323,8 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                         a.A.gamemode = s.LX.MAZE,
                         a.A.mobsExpire = !0,
                         a.A.teamCount = 0,
-                        a.A.announceRarity = 8,
-                        await k(a.A.biome);
+                        a.A.announceRarity = 6,
+                        await P(a.A.biome);
                         break;
                     case "ffa":
                         a.A.isTDM = !1,
@@ -3586,7 +4352,7 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                         throw new Error("Invalid gamemode")
                     }
                     a.A.secretKey = t[3],
-                    console.log(["Lobby Created:", "  - Gamemode: " + t[1], "  - Biome: " + s.hg[t[4]].name, "  - Modded: " + (t[2] ? "Yes" : "No"), "  - Admin UUID: " + a.A.secretKey, "  - Spawn Table: " + (a.A.mobTable ? C(a.A.mobTable) : "None")].join("\n"))
+                    console.log(["Lobby Created:", "  - Gamemode: " + t[1], "  - Biome: " + s.hg[t[4]].name, "  - Modded: " + (t[2] ? "Yes" : "No"), "  - Admin UUID: " + a.A.secretKey, "  - Spawn Table: " + (a.A.mobTable ? I(a.A.mobTable) : "None")].join("\n"))
                 }
                 postMessage(t) {}
             }
@@ -3605,42 +4371,42 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
             });
             var s = i(110);
             const a = structuredClone(s.cK)
-              , n = [new s.lm("Basic",22.5,10,10).setDescription("A simple petal. Not too strong, not too weak."), new s.lm("Light",5.625,6.5,17).setMulti([1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 7, 7], 0, !0).setSize(.75).setDescription("It's very light and recharges quickly, at the cost of damage."), new s.lm("Faster",14.625,12,7).setSize(.75).setExtraRadians(.03).setDescription("This one makes your petals spin faster."), new s.lm("Heavy",45,100,2.5).setSize(1.25).setDensity(3).setDescription("A more chunky petal that hits harder but takes longer to recharge."), new s.lm("Stinger",101.25,1,75).setMulti([1, 1, 2, 2, 3, 3, 4, 4, 5, 5], 1, !0).setDescription("A fragile petal that deals lots of damage."), new s.lm("Rice",0,.5,5).setSize(1.25).setDescription("A bit weak, but recharges instantly."), new s.lm("Rock",45,50,5.5).setSize(1.3).setDescription("It's a rock, not much to say about it."), new s.lm("Cactus",45,18,6).setSize(1.25).setExtraHealth(35).setHuddles(1).setDescription("A petal that gives you extra health. Pretty magical if you ask me."), new s.lm("Leaf",22.5,8,6).setSize(1.2).setConstantHeal(5.5).setDescription("A petal that heals you over time by the power of photosynthesis."), new s.lm("Wing",28.125,10,10).setSize(1.3).setWingMovement(!0).setDescription("It comes and it goes."), new s.lm("Bone",33.75,10,6).setSize(1.6).setArmor(6).setDescription("A petal that reduces incoming damage."), new s.lm("Dirt",33.75,8,8).setSize(1.3).setExtraHealth(55).setSpeedMultiplier(.925).setExtraSize(2.5).setHuddles(1).setDescription("The extra soil gives your flower more mass, but it does slow you down a bit..."), new s.lm("Magnolia",33.75,8,8).setConstantHeal(3).setExtraHealth(20).setSize(1.5).setDescription("A purely magical petal that heals you over time while simultaneously making you tougher."), new s.lm("Corn",112.5,425,2).setSize(1.6).setDescription("It's a piece of corn. They say ants like to snack on it."), new s.lm("Sand",10.125,5,8).setSize(.85).setMulti(4, !0).setDescription("Some fine grains of sand. They recharge quickly and can pack a punch."), new s.lm("Orange",16.875,12.5,7.5).setMulti(3, !0).setDescription("A bunch of oranges. They're pretty juicy."), new s.lm("Missile",22.5,4,18.5).setLaunchable(.7, 45).setSize(1.35).setDescription("You can actually shoot this one!"), new s.lm("Pea.projectile",2250,3,3).setDescription("[object null object]"), new s.lm("Rose",33.75,5,5).setHealing(12.5).setHuddles(1).setDescription("Not great at combat, but it's healing properties are amazing."), new s.lm("Yin Yang",22.5,9,11).setYinYang(1).setDescription("The mysterious petal of balance."), new s.lm("Pollen",16.875,13,13).setSize(.6).setLaunchable(0, 75).setMulti([1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5], !1, !0).setDescription("It makes you sneeze. Don't drop it!"), new s.lm("Honey",11.25,7.5,7.5).setSize(1.1).setEnemySpeedMultiplier(.45, 5).setDescription("It's sticky and will slow your enemies down."), new s.lm("Iris",22.5,10,5).setSize(.8).setPoison(12.5, 5).setDescription("Packs an unexpected punch in its secret weapon: poison."), new s.lm("Web",45,7,7).setDescription("Sticky!"), new s.lm("Web.projectile",2250,1e5,0).setSize(30).setEnemySpeedMultiplier(.334, .05).setIgnoreWalls(1).setDescription("[object null object]"), new s.lm("Third Eye",0,0,0).setExtraRange(.5).setMulti(0, !1).setWearable(s.DQ.THIRD_EYE).setDescription("Through the eye of the beholder comes extra range."), new s.lm("Pincer",22.5,7.5,7.5).setSize(1.2).setPoison(2, 5).setEnemySpeedMultiplier(.6, 5).setDescription("Poisonous, and it slows down your enemies. A perfect double whammy."), new s.lm("Beetle Egg",45,25,1).setSize(1.5).setHuddles(1).setDescription("Something might pop out of this!"), new s.lm("Antennae",0,0,0).setExtraVision(150).setMulti(0, !1).setWearable(s.DQ.ANTENNAE).setDescription("These feelers give you some extra vision."), new s.lm("Peas",33.75,20,17.5).setSize(1.15).setDescription("A pod of peas. They'll explode if you're not careful."), new s.lm("Stick",22.5,25,1).setSize(1.25).setHuddles(1).setMulti(2, !1).setDescription("A bundle of sticks... I wonder what'll happen if you spin them around in the desert..."), new s.lm("Scorpion Missile.projectile",2250,5,2.5).setPoison(2.5, 5).setDescription("[object null object]"), new s.lm("Dahlia",16.875,5,5).setHealing(3).setSize(.5).setHuddles(1).setMulti(3, !0).setDescription("A very consistent trickle heal."), new s.lm("Primrose",22.5,12.5,7.5).setSize(1.3).setHuddles(1).setHealSpit(67.5, 125, 10).setDescription("Said to be from a mystical covenant of witches who specialized in healing nature."), new s.lm("Fire Spellbook",28.125,15,5).setSize(1.2).setPentagramAbility(90, 150, 10, {
+              , n = [new s.lm("Basic",22.5,10,10).setDescription("A simple petal. Not too strong, not too weak."), new s.lm("Light",5.625,6.5,17).setMulti([1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 7, 7], 0, !0).setSize(.75).setDescription("It's very light and recharges quickly, at the cost of damage."), new s.lm("Faster",14.625,12,7).setSize(.75).setExtraRadians(.03).setDescription("This one makes your petals spin faster."), new s.lm("Heavy",45,100,2.5).setSize(1.25).setDensity(3).setDescription("A more chunky petal that hits harder but takes longer to recharge."), new s.lm("Stinger",101.25,1,75).setMulti([1, 1, 2, 2, 3, 3, 4, 4, 5, 5], 1, !0).setDescription("A fragile petal that deals lots of damage."), new s.lm("Rice",0,.5,5).setSize(1.25).setDescription("A bit weak, but recharges instantly."), new s.lm("Rock",45,50,5.5).setSize(1.3).setDescription("It's a rock, not much to say about it."), new s.lm("Cactus",45,18,6).setSize(1.25).setExtraHealth(35).setHuddles(1).setDescription("A petal that gives you extra health. Pretty magical if you ask me."), new s.lm("Leaf",22.5,8,6).setSize(1.2).setConstantHeal(5.5).setDescription("A petal that heals you over time by the power of photosynthesis."), new s.lm("Wing",28.125,10,10).setSize(1.3).setWingMovement(!0).setDescription("It comes and it goes."), new s.lm("Bone",33.75,10,6).setSize(1.6).setArmor(6).setDescription("A petal that reduces incoming damage."), new s.lm("Dirt",33.75,8,8).setSize(1.3).setExtraHealth(55).setSpeedMultiplier(.925).setExtraSize(2.5).setHuddles(1).setDescription("The extra soil gives your flower more mass, but it does slow you down a bit..."), new s.lm("Magnolia",33.75,8,8).setConstantHeal(3).setExtraHealth(20).setSize(1.5).setDescription("A purely magical petal that heals you over time while simultaneously making you tougher."), new s.lm("Corn",112.5,425,2).setSize(1.6).setDescription("It's a piece of corn. They say ants like to snack on it."), new s.lm("Sand",10.125,5,8).setSize(.85).setMulti(4, !0).setDescription("Some fine grains of sand. They recharge quickly and can pack a punch."), new s.lm("Orange",16.875,12.5,7.5).setMulti(3, !0).setDescription("A bunch of oranges. They're pretty juicy."), new s.lm("Missile",22.5,4,18.5).setLaunchable(.7, 45).setSize(1.35).setDescription("You can actually shoot this one!"), new s.lm("Pea.projectile",2250,3,3).setDescription("[object null object]"), new s.lm("Rose",33.75,5,5).setHealing(12.5).setHuddles(1).setDescription("Not great at combat, but it's healing properties are amazing."), new s.lm("Yin Yang",22.5,9,11).setYinYang(1).setDescription("The mysterious petal of balance."), new s.lm("Pollen",16.875,13,13).setSize(.6).setLaunchable(0, 75).setMulti([1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5], !1, !0).setDescription("It makes you sneeze. Don't drop it!"), new s.lm("Honey",11.25,7.5,7.5).setSize(1.1).setEnemySpeedMultiplier(.45, 5).setDescription("It's sticky and will slow your enemies down."), new s.lm("Iris",22.5,10,5).setSize(.8).setPoison(12.5, 5).setDescription("Packs an unexpected punch in its secret weapon: poison."), new s.lm("Web",45,7,7).setDescription("Sticky!"), new s.lm("Web.projectile",2250,1e5,0).setSize(30).setEnemySpeedMultiplier(.334, .05).setIgnoreWalls(1).setDescription("[object null object]"), new s.lm("Third Eye",0,0,0).setExtraRange(.5).setMulti(0, !1).setWearable(s.DQ.THIRD_EYE).setDescription("Through the eye of the beholder comes extra range."), new s.lm("Pincer",22.5,7.5,7.5).setSize(1.2).setPoison(2, 5).setEnemySpeedMultiplier(.6, 5).setDescription("Poisonous, and it slows down your enemies. A perfect double whammy."), new s.lm("Beetle Egg",1,25,1e-15).setCooldown([8, 4, 5, 6, 6, 9, 14, 70]).setSize(1.5).setHuddles(1).setDescription("Something might pop out of this!"), new s.lm("Antennae",0,0,0).setExtraVision(150).setMulti(0, !1).setWearable(s.DQ.ANTENNAE).setDescription("These feelers give you some extra vision."), new s.lm("Peas",33.75,20,17.5).setSize(1.15).setDescription("A pod of peas. They'll explode if you're not careful."), new s.lm("Stick",1,1/0,1e-15).setCooldown([1000, 1000, 1000, 5, 7, 12, 28, 140]).setSize(1.25).setHuddles(1).setMulti([1, 1, 1, 3, 3, 3, 3, 3], !1).setDescription("A bundle of sticks... I wonder what'll happen if you spin them around in the desert..."), new s.lm("Scorpion Missile.projectile",2250,5,2.5).setPoison(2.5, 5).setDescription("[object null object]"), new s.lm("Dahlia",16.875,5,5).setHealing(3).setSize(.5).setHuddles(1).setMulti(3, !0).setDescription("A very consistent trickle heal."), new s.lm("Primrose",22.5,12.5,7.5).setSize(1.3).setHuddles(1).setHealSpit(67.5, 125, 10).setDescription("Said to be from a mystical covenant of witches who specialized in healing nature."), new s.lm("Fire Spellbook",28.125,15,5).setSize(1.2).setPentagramAbility(90, 150, 10, {
                 damage: 5,
                 duration: 5
             }, {
                 multiplier: .5,
                 duration: 5
-            }).setHuddles(1).setDescription("A tome of ancient spells. It's said to be able to focus the power of a fallen Demon."), new s.lm("Deity",0,50,50).setSize(1.15).setMulti(3, !0).setHealSpit(10, 1e3, 5).setConstantHeal(1e3).setExtraHealth(1e4).setEnemySpeedMultiplier(.1, 10).setDamageReduction(.2).setExtraRadians(.01).setExtraRange(1.05).setExtraVision(5).setPoison(5, 10).setSpeedMultiplier(1.05).setWingMovement(1).setLightning([5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10], 512, 128).setDescription("A petal that channels the power of all that came before."), new s.lm("Lightning",22.5,1e-15,5).setLightning([3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 9], 256, 7).setDescription("Shockingly shocking!"), new s.lm("Powder",16.875,3,5).setSize(1.65).setSpeedMultiplier(1.03).setHuddles(1).setDescription("This special cocaine will make you go fast!"), new s.lm("Ant Egg",56.25,25,1).setSize(1.1).setMulti(4, !1).setHuddles(1).setDescription("A petal that spawns ants. They'll help you out!"), new s.lm("Yucca",33.75,8,6).setSize(1.2).setConstantHeal(7.5, !0).setDescription("A strange leaf that heals you but only when you're in defensive mode."), new s.lm("Magnet",45,9,6).setSize(1.55).setExtraPickupRange(125).setAttractsLightning(1).setHuddles(1).setDescription("This petal's magnetic field will attract nearby items. Does not stack."), new s.lm("Amulet",0,0,0).setMulti(0, !1).setWearable(s.DQ.AMULET).setDamageReflection(.175, .275).setDescription("What an oddity! It's said to reflect a portion of incoming conventional damage. Does not stack."), new s.lm("Jelly",23,9,7).setDensity(20).setDescription("Super bouncy! Knocks all your enemies around. Very fun to use and cause problems with."), new s.lm("Yggdrasil",1012.5,1 / 0,0).setDeathDefying(.15, 2.5).setHuddles(1).setPhases(1).setDescription("The tree of life. If you were to die with this petal alive, you'd be revived with a portion of your health."), new s.lm("Glass",45,1e-15,2.5).setPhases(1).setDescription("A shard of glass that phases through enemies."), new s.lm("Dandelion",22.5,10,8).setMulti(2, !1).setSize(1.4).setLaunchable(.575, 35).setEnemySpeedMultiplier(.65, 6).setDescription("A paralyzing force."), new s.lm("Sponge",33.75,24,0).setSize(4 / 3).setHuddles(1).setAbsorbsDamage(35, [67.5, 67.5, 67.5, 90, 90, 90, 112.5, 112.5, 112.5, 135, 157.5, 180]).setDescription("It absorbs conventional damage done to your flower. If incoming damage is too great, you will suffer all of the damage the sponge has contained at once."), new s.lm("Pearl",45,23,6.5).setSize(2).setPlaceDown(1).setDescription("A pearl that can be placed on the ground. You can call it back to you at any time."), new s.lm("Shell",33.75,13,6).setSize(1.5).setShield(12.5).setHuddles(1).setDescription("A shell that provides extra protection through a shield."), new s.lm("Bubble",11.25,1e-15,1e-15).setSize(1.3).setBoost([5, 7, 11, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((t => 2 * t | 0)), [1, .9, .8, .7, .6, .5, .5, .4, .3, .2, .1, .1].map((t => 22.5 * t | 0))).setDescription("It will boost you when you pop it."), new s.lm("Air",0,0,0).setMulti(0, !1).setWearable(s.DQ.AIR).setExtraSize(3).setDescription("Literally nothing at all, but it puffs you up."), new s.lm("Starfish",33.75,9,11).setSize(1.4).setConstantHeal(9, !1, .7).setDescription("A leg of a starfish. It will heal you quite effectively while you are under 70% health."), new s.lm("Fang",28.125,8,10).setSize(1.15).setHealBack([.2, .25, .3, .35, .4, .45, -.5, .55, .6, .65, .7, .75]).setDescription("The fang of a dangerous Leech. It will heal back the damage it causes."), new s.lm("Goo",39.375,10,10).setSize(1.3).setPoison(2, 5).setEnemySpeedMultiplier(.7, 5).setLaunchable(1, 35).setDescription("This sticky goo isn't good for you..."), new s.lm("Maggot Poo",22.5,5,5.5).setSize(1.3).setDamageReflection(.05).setLaunchable(0, 75).setDescription("A steaming pile of shi- I mean, poo."), new s.lm("Lightbulb",22.5,10,10).setSize(1.4).setAttractsAggro(1).setHuddles(1).setLighting(1).setDescription("Mobs will prioritize your shiny bulb when in use. The priority increases with each rarity, and stacks with itself."), new s.lm("Battery",50.625,1e-15,0).setPhases(1).setSize(1.34).setLightning(4, 256, 5, [2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7], !0).setDescription("A battery that can release electric charges when its parent is hit."), new s.lm("Dust",16.875,6,7.5).setMulti(3, !0).setLaunchable(.7, 55).setDensity(1.5).setDescription("A cloud of dust that can be launched at enemies."), new s.lm("Armor",0,0,0).setMulti(0, !1).setWearable(s.DQ.ARMOR).setExtraHealth(-10).setDamageReduction(.25).setDescription("This petal greatly protects you, but at a cost..."), new s.lm("Wasp Missile.projectile",2250,4,4).setPoison(2, 8).setDescription("[object null object]"), new s.lm("Shrub",33.75,15,6).setSize(1.2).setExtraHealth(15).setPoison(3, 2).setDescription("Extra HP with a bonus: poison!"), new s.lm("projectile.grape",2250,1,4).setPoison(.75, 6).setDescription("[object null object]"), new s.lm("Grapes",33.75,15,10).setSize(1.15).setPoison(7.5, 5).setDescription("With an added bonus: Poison!"), new s.lm("Lantern",45,5,5).setHuddles(1).setDescription("This fragile lantern shines so bright...").setLighting(3), new s.lm("web.player.launched",2250,1e5,0).setSize(30).setEnemySpeedMultiplier(.334, .05).setIgnoreWalls(1).setDescription("[object null object]"), new s.lm("Branch",67.5,10,10).setSize(1.5).setHuddles(1).setMulti(2, !1).setDescription("A fragile branch from the Wilt."), new s.lm("Leech Egg",45,25,1).setSize(1.5).setHuddles(1).setDescription("Summons leeches to help protect you!"), new s.lm("Hornet Egg",45,25,1).setSize(1.5).setMulti(2, !1).setHuddles(1).setDescription("Hey wait a minute... This isn't a Beetle Egg!"), new s.lm("Candy",22.5,5,5).setSize(.9).setMulti(5, !0).setDescription("Ooh, tasty!"), new s.lm("Claw",45,.25,8).setExtraDamage(.75, 1, 7.5).setDescription("Sharp against the strong, weak against the weak."), new s.lm("Bullet.projectile",1e3,12,2).setDescription("[object null object]"), new s.lm("Square Egg",45,50,1).setSize(1.2).setHuddles(1).setDescription("This isn't from this world..."), new s.lm("Triangle Egg",67.5,100,2).setSize(1.5).setHuddles(1).setDescription("This isn't from this world..."), new s.lm("Pentagon Egg",90,200,4).setSize(1.8).setHuddles(1).setDescription("This isn't from this world...")]
+            }).setHuddles(1).setDescription("A tome of ancient spells. It's said to be able to focus the power of a fallen Demon."), new s.lm("Deity",0,50,50).setSize(1.15).setMulti(3, !0).setHealSpit(10, 1e3, 5).setConstantHeal(1e3).setExtraHealth(1e4).setEnemySpeedMultiplier(.1, 10).setDamageReduction(.2).setExtraRadians(.01).setExtraRange(1.05).setExtraVision(5).setPoison(5, 10).setSpeedMultiplier(1.05).setWingMovement(1).setLightning([5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10], 512, 128).setDescription("A petal that channels the power of all that came before."), new s.lm("Lightning",22.5,1e-15,5).setLightning([3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 9], 256, 7).setDescription("Shockingly shocking!"), new s.lm("Powder",16.875,3,5).setSize(1.65).setSpeedMultiplier(1.03).setHuddles(1).setDescription("This special cocaine will make you go fast!"), new s.lm("Ant Egg",1,25,1e-15).setCooldown([12, 6, 7.5, 9, 9, 13.5, 21, 105]).setSize(1.1).setMulti([4, 4, 4, 4, 4, 4, 5, 5], !1).setHuddles(1).setDescription("A petal that spawns ants. They'll help you out!"), new s.lm("Yucca",33.75,8,6).setSize(1.2).setConstantHeal(7.5, !0).setDescription("A strange leaf that heals you but only when you're in defensive mode."), new s.lm("Magnet",45,9,6).setSize(1.55).setExtraPickupRange(725).setAttractsLightning(1).setHuddles(1).setDescription("This petal's magnetic field will attract nearby items. Does not stack."), new s.lm("Amulet",0,0,0).setMulti(0, !1).setWearable(s.DQ.AMULET).setDamageReflection(.175, .275).setDescription("What an oddity! It's said to reflect a portion of incoming conventional damage. Does not stack."), new s.lm("Jelly",23,9,7).setDensity(20).setDescription("Super bouncy! Knocks all your enemies around. Very fun to use and cause problems with."), new s.lm("Yggdrasil",1012.5,100,0).setCooldown([1000, 1000, 320 ,80 ,20, 5, 1.25, 0.1]).setLaunchable(0, 112.5).setRevives(1).setHuddles(1).setDescription("From a dead lively tree, apon falling revives a fallen teammate"), new s.lm("Glass",45,1e-15,2.5).setPhases(1).setDescription("A shard of glass that phases through enemies."), new s.lm("Dandelion",22.5,10,8).setMulti(2, !1).setSize(1.4).setLaunchable(.575, 35).setEnemySpeedMultiplier(.65, 6).setDescription("A paralyzing force."), new s.lm("Sponge",33.75,24,0).setSize(4 / 3).setHuddles(1).setAbsorbsDamage(35, [67.5, 67.5, 67.5, 90, 90, 90, 112.5, 112.5, 112.5, 135, 157.5, 180]).setDescription("It absorbs conventional damage done to your flower. If incoming damage is too great, you will suffer all of the damage the sponge has contained at once."), new s.lm("Pearl",45,23,6.5).setSize(2).setPlaceDown(1).setDescription("A pearl that can be placed on the ground. You can call it back to you at any time."), new s.lm("Shell",33.75,13,6).setSize(1.5).setShield(12.5).setHuddles(1).setDescription("A shell that provides extra protection through a shield."), new s.lm("Bubble",11.25,1e-15,1e-15).setSize(1.3).setBoost([5, 7, 11, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((t => 2 * t | 0)), [1, .9, .8, .7, .6, .5, .5, .4, .3, .2, .1, .1].map((t => 22.5 * t | 0))).setDescription("It will boost you when you pop it."), new s.lm("Air",0,0,0).setMulti(0, !1).setWearable(s.DQ.AIR).setExtraSize(3).setDescription("Literally nothing at all, but it puffs you up."), new s.lm("Starfish",33.75,9,11).setSize(1.4).setConstantHeal(9, !1, .7).setDescription("A leg of a starfish. It will heal you quite effectively while you are under 70% health."), new s.lm("Fang",28.125,8,10).setSize(1.15).setHealBack([.2, .25, .3, .35, .4, .45, -.5, .55, .6, .65, .7, .75]).setDescription("The fang of a dangerous Leech. It will heal back the damage it causes."), new s.lm("Goo",39.375,10,10).setSize(1.3).setPoison(2, 5).setEnemySpeedMultiplier(.7, 5).setLaunchable(1, 35).setDescription("This sticky goo isn't good for you..."), new s.lm("Maggot Poo",22.5,5,5.5).setSize(1.3).setDamageReflection(.05).setLaunchable(0, 75).setDescription("A steaming pile of shi- I mean, poo."), new s.lm("Lightbulb",22.5,10,10).setSize(1.4).setAttractsAggro(1).setHuddles(1).setLighting(1).setDescription("Mobs will prioritize your shiny bulb when in use. The priority increases with each rarity, and stacks with itself."), new s.lm("Battery",50.625,1e-15,0).setPhases(1).setSize(1.34).setLightning(4, 256, 5, [2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7], !0).setDescription("A battery that can release electric charges when its parent is hit."), new s.lm("Dust",16.875,6,7.5).setMulti(3, !0).setLaunchable(.7, 55).setDensity(1.5).setDescription("A cloud of dust that can be launched at enemies."), new s.lm("Armor",0,0,0).setMulti(0, !1).setWearable(s.DQ.ARMOR).setExtraHealth(-10).setDamageReduction(.25).setDescription("This petal greatly protects you, but at a cost..."), new s.lm("Wasp Missile.projectile",2250,4,4).setPoison(2, 8).setDescription("[object null object]"), new s.lm("Shrub",33.75,15,6).setSize(1.2).setExtraHealth(15).setPoison(3, 2).setDescription("Extra HP with a bonus: poison!"), new s.lm("projectile.grape",2250,1,4).setPoison(.75, 6).setDescription("[object null object]"), new s.lm("Grapes",33.75,15,10).setSize(1.15).setPoison(7.5, 5).setDescription("With an added bonus: Poison!"), new s.lm("Lantern",45,5,5).setHuddles(1).setDescription("This fragile lantern shines so bright...").setLighting(3), new s.lm("web.player.launched",2250,1e5,0).setSize(30).setEnemySpeedMultiplier(.334, .05).setIgnoreWalls(1).setDescription("[object null object]"), new s.lm("Branch",67.5,10,10).setSize(1.5).setHuddles(1).setMulti(2, !1).setDescription("A fragile branch from the Wilt."), new s.lm("Leech Egg",45,25,1).setSize(1.5).setHuddles(1).setDescription("Summons leeches to help protect you!"), new s.lm("Hornet Egg",45,25,1).setSize(1.5).setMulti(2, !1).setHuddles(1).setDescription("Hey wait a minute... This isn't a Beetle Egg!"), new s.lm("Candy",22.5,5,5).setSize(.9).setMulti(5, !0).setDescription("Ooh, tasty!"), new s.lm("Claw",45,.25,8).setExtraDamage(.75, 1, 7.5).setDescription("Sharp against the strong, weak against the weak."), new s.lm("Bullet.projectile",1e3,12,2).setDescription("[object null object]"), new s.lm("Square Egg",45,50,1).setSize(1.2).setHuddles(1).setDescription("This isn't from this world..."), new s.lm("Triangle Egg",67.5,100,2).setSize(1.5).setHuddles(1).setDescription("This isn't from this world..."), new s.lm("Pentagon Egg",90,200,4).setSize(1.8).setHuddles(1).setDescription("This isn't from this world...")]
               , h = t => n.findIndex((e => e.name === t));
             n[h("Web")].setShootOut(h("web.player.launched")),
             n[h("Peas")].setSplits(h("Pea.projectile"), 4),
             n[h("Grapes")].setSplits(h("projectile.grape"), 4);
-            const r = [new s.XE("Ladybug",25,10,25,2.5).addDrop(h("Light")).addDrop(h("Rose"), .6), new s.XE("Rock",75,5,27.5,0).addDrop(h("Rock")).addDrop(h("Heavy"), .5, 2), new s.XE("Bee",15,25,25,4).setMoveInSines(1).setNeutral(1).addDrop(h("Stinger"), .7).addDrop(h("Pollen")).addDrop(h("Honey"), .4), new s.XE("Spider",20,10,20,4).setAggressive(1).setPoison(5, 3).setProjectile({
+            const r = [new s.XE("Ladybug",25,10,25,2.5).addDrop(h("Light"), .25).addDrop(h("Rose"), .25), new s.XE("Rock",75,5,27.5,0).addDrop(h("Rock"), .15).addDrop(h("Heavy"), .05, 2), new s.XE("Bee",15,25,25,4).setMoveInSines(1).setNeutral(1).addDrop(h("Stinger"), .25).addDrop(h("Pollen"), .1).addDrop(h("Honey"), .1), new s.XE("Spider",20,10,20,4).setAggressive(1).setPoison(5, 3).setProjectile({
                 petalIndex: h("Web") + 1,
                 cooldown: 22.5,
                 health: 1 / 0,
                 damage: 0,
                 speed: 0,
                 range: 175,
-                size: 1,
+                size: 1.25,
                 runs: !0,
                 nullCollision: !0
-            }).addDrop(h("Faster")).addDrop(h("Web"), .5).addDrop(h("Third Eye"), .025, 5), new s.XE("Beetle",30,10,30,3).setAggressive(1).addDrop(h("Iris")).addDrop(h("Pincer"), .8).addDrop(h("Beetle Egg"), .225), new s.XE("Leafbug",35,3.5,30,2.5).setNeutral(1).setDamageReduction(.13).addDrop(h("Leaf")).addDrop(h("Bone"), .5).addDrop(h("Cactus"), .25), new s.XE("Roach",30,5,30,5.5).setNeutral(1).addDrop(h("Antennae"), 1, 2).addDrop(h("Magnolia"), .6).addDrop(h("Bone"), .6), new s.XE("Hornet",35,15,30,3).setAggressive(1).setProjectile({
+            }).addDrop(h("Faster"), .25).addDrop(h("Web"), .25).addDrop(h("Third Eye"), .01, 2), new s.XE("Beetle",30,10,30,3).setAggressive(1).addDrop(h("Beetle Egg"), .25), new s.XE("Leafbug",35,3.5,30,2.5).setNeutral(1).setArmor(10).addDrop(h("Leaf")), new s.XE("Roach",30,5,30,5.5).setNeutral(1).addDrop(h("Antennae"), 0.5, 2), new s.XE("Hornet",35,15,30,3).setAggressive(1).setProjectile({
                 petalIndex: h("Missile"),
-                cooldown: 45,
-                health: 4,
-                damage: 5,
-                speed: 3.75,
+                cooldown: 33.75,
+                health: 5,
+                damage: 10,
+                speed: 4.25,
                 range: 55
-            }).addDrop(h("Missile")).addDrop(h("Antennae"), 1, 2).addDrop(h("Orange")), new s.XE("Mantis",35,10,32.5,2).setAggressive(1).setProjectile({
+            }).addDrop(h("Missile"), 0.25, 1).addDrop(h("Antennae"), 0.1, 2).addDrop(h("Orange"), 0.25, 1), new s.XE("Mantis",35,10,32.5,2).setAggressive(1).setProjectile({
                 petalIndex: h("Pea.projectile"),
                 cooldown: 140.625,
-                health: 1.25,
-                damage: 1.5,
-                speed: 4.5,
+                health: 2.5,
+                damage: 2,
+                speed: 3.5,
                 range: 55,
-                size: .2,
+                size: .35,
                 multiShot: {
                     count: 3,
                     delay: 256
@@ -3658,15 +4424,15 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     delay: 10,
                     spread: .2
                 }
-            }).addDrop(h("Rock")).addDrop(h("Wing")).addDrop(h("Heavy"), .5, 2), new s.XE("Sandstorm",45,15,35,3).setSandstormMovement(1).setSize(35, s.rx.SIZE_SCALE, .9, .25).addDrop(h("Sand")).addDrop(h("Glass"), .7).addDrop(h("Stick"), .2, 2), new s.XE("Scorpion",45,7.5,32.5,3).setAggressive(1).setStrafes(30, 15, 1.25).setProjectile({
+            }).addDrop(h("Rock")).addDrop(h("Wing")).addDrop(h("Heavy"), .5, 2), new s.XE("Sandstorm",45,15,35,3).setSandstormMovement(1).setSize(35, s.rx.SIZE_SCALE, .9, .25).addDrop(h("Sand"), .15).addDrop(h("Glass"), .1).addDrop(h("Stick"), .05, 3), new s.XE("Scorpion",45,7.5,32.5,3).setAggressive(1).setStrafes(30, 15, 1.25).setProjectile({
                 petalIndex: h("Scorpion Missile.projectile"),
                 cooldown: 45,
-                health: 2,
-                damage: 2,
-                speed: 5,
-                range: 65,
-                size: .2
-            }).addDrop(h("Pincer")).addDrop(h("Iris")), new s.XE("Demon",100,7.5,35,1).setAggressive(1).setPushability(.8).setProjectile({
+                health: 5,
+                damage: 5,
+                speed: 4.25,
+                range: 55,
+                size: .35
+            }).addDrop(h("Pincer"), .25, 1).addDrop(h("Iris"), .25, 1), new s.XE("Demon",100,7.5,35,1).setAggressive(1).setPushability(.8).setProjectile({
                 petalIndex: h("Missile"),
                 cooldown: 112.5,
                 health: 1,
@@ -3679,7 +4445,7 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     delay: 128,
                     spread: .5
                 }
-            }).addDrop(h("Bone")).addDrop(h("Lightning"), .2).addDrop(h("Fire Spellbook"), .03), new s.XE("Jellyfish",40,15,30,2.5).setAggressive(1).setLightning([75, 75, 75, 65, 65, 65, 55, 55, 55, 45, 35, 25], [2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 8], 125, 2).addDrop(h("Lightning")).addDrop(h("Jelly")), new s.XE("Cactus",50,20,30,0).setPushability(.5).addDrop(h("Cactus")).addDrop(h("Stinger"), .8), new s.XE("Baby Ant",10,5,15,2).addDrop(h("Light"), .5).addDrop(h("Faster"), .5).addDrop(h("Rice"), .5), new s.XE("Worker Ant",15,5,15,3.25).setNeutral(1).addDrop(h("Light"), .5).addDrop(h("Leaf"), .5).addDrop(h("Corn"), .5), new s.XE("Soldier Ant",25,5,15,3.5).setAggressive(1).addDrop(h("Faster"), .5).addDrop(h("Wing"), .5), new s.XE("Queen Ant",100,5,25,3.5).setAggressive(1).setPushability(.8).addDrop(h("Dahlia")).addDrop(h("Dirt"), .5).addDrop(h("Ant Egg"), .8), new s.XE("Ant Hole",100,1,25,0).setPushability(0).addDrop(h("Dirt")).addDrop(h("Ant Egg"), .5), new s.XE("Baby Fire Ant",10,10,15,2).addDrop(h("Light"), .5).addDrop(h("Yucca"), .5), new s.XE("Worker Fire Ant",15,10,15,3.25).setNeutral(1).addDrop(h("Light"), .5).addDrop(h("Yucca"), .5), new s.XE("Soldier Fire Ant",25,10,15,3.5).setAggressive(1).addDrop(h("Faster"), .5).addDrop(h("Glass"), .5), new s.XE("Queen Fire Ant",100,10,25,3.5).setAggressive(1).setPushability(.8).addDrop(h("Primrose"), .5).addDrop(h("Dirt"), .5).addDrop(h("Ant Egg"), .8), new s.XE("Fire Ant Hole",100,2,25,0).setPushability(0).addDrop(h("Dirt")).addDrop(h("Ant Egg"), .5).addDrop(h("Magnet"), .5, 2), new s.XE("Baby Termite",15,5,15,2).setDamageReduction(.1).setDamageReflection(.05, .5).addDrop(h("Bone"), .5).addDrop(h("Amulet"), .15), new s.XE("Worker Termite",20,5,15,3.25).setNeutral(1).setDamageReduction(.1).setDamageReflection(.05, .5).addDrop(h("Bone"), .5).addDrop(h("Amulet"), .15), new s.XE("Soldier Termite",30,5,15,3.5).setAggressive(1).setDamageReduction(.1).setDamageReflection(.05, .5).addDrop(h("Bone"), .5).addDrop(h("Amulet"), .15), new s.XE("Termite Overmind",150,2,30,.5).setAggressive(1).setPushability(.5).setDamageReduction(.1).setDamageReflection(.05, .5).addDrop(h("Ant Egg"), .5).addDrop(h("Amulet"), .4), new s.XE("Termite Mound",150,1,30,0).setDamageReduction(.1).setPushability(0).addDrop(h("Dirt")).addDrop(h("Armor"), .75).addDrop(h("Magnet"), .5), new s.XE("Ant Egg",20,1,15,0).addDrop(h("Ant Egg")), new s.XE("Queen Ant Egg",20,1,15,0), new s.XE("Fire Ant Egg",20,2,15,0).addDrop(h("Ant Egg")), new s.XE("Queen Fire Ant Egg",20,2,15,0), new s.XE("Termite Egg",30,1,15,0).addDrop(h("Ant Egg")), new s.XE("Evil Ladybug",25,15,25,2.5).setAggressive(1).setDamageReduction(.125).addDrop(h("Dahlia")).addDrop(h("Yin Yang"), .15), new s.XE("Shiny Ladybug",25,10,25,2.5).setNeutral(1).addDrop(h("Primrose")).addDrop(h("Yggdrasil"), .15, 3), new s.XE("Angelic Ladybug",55,15,25,2.5).setNeutral(1).setDamageReflection(.05, .5).addDrop(h("Dahlia")).addDrop(h("Yin Yang"), .15).addDrop(h("Third Eye"), .05, 3), new s.XE("Centipede",25,10,22.5,3.5).setNeutral(1).setCentipedeMovement(1).addDrop(h("Peas"), .5).addDrop(h("Leaf"), .5), new s.XE("Centipede",25,10,22.5,3.5).setSystem(1).setNeutral(1).setCentipedeMovement(1).addDrop(h("Peas"), .5).addDrop(h("Leaf"), .5), new s.XE("Desert Centipede",20,10,22.5,5).setDesertCentipedeMovement(1).addDrop(h("Powder"), .5).addDrop(h("Sand"), .5), new s.XE("Desert Centipede",20,10,22.5,5).setSystem(1).setDesertCentipedeMovement(1).addDrop(h("Powder"), .5).addDrop(h("Sand"), .5), new s.XE("Evil Centipede",25,10,22.5,3.5).setAggressive(1).setCentipedeMovement(1).addDrop(h("Iris"), .5).addDrop(h("Grapes"), .5), new s.XE("Evil Centipede",25,10,22.5,3.5).setSystem(1).setAggressive(1).setCentipedeMovement(1).addDrop(h("Iris"), .5).addDrop(h("Grapes"), .5), new s.XE("Dandelion",25,10,22.5,0).setPushability(.5).addDrop(h("Dandelion")).addDrop(h("Pollen"), .5), new s.XE("Sponge",35,3,30,0).addDrop(h("Sponge")), new s.XE("Bubble",1,1,30,0).addDrop(h("Bubble"), .8).addDrop(h("Air"), .8), new s.XE("Shell",40,10,32.5,25).setMovesInBursts(1).setNeutral(1).addDrop(h("Shell"), .8).addDrop(h("Pearl"), .5).addDrop(h("Magnet"), .2), new s.XE("Starfish",30,10,30,4).setAggressive(1).setSpins(1).setHealing(.007).setFleeAtLowHealth(.35).addDrop(h("Starfish"), .85).addDrop(h("Sand"), .85), new s.XE("Leech",25,3.5,16,5.5).setAggressive(1).addDrop(h("Fang")).addDrop(h("Faster")), new s.XE("Maggot",30,10,35,2).setAggressive(1).setProjectile({
+            }).addDrop(h("Bone")).addDrop(h("Lightning"), .2).addDrop(h("Fire Spellbook"), .03), new s.XE("Jellyfish",40,15,30,2.5).setAggressive(1).setLightning([75, 75, 75, 65, 65, 65, 55, 55, 55, 45, 35, 25], [2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 8], 125, 2).addDrop(h("Lightning"), .15, 1).addDrop(h("Jelly"), .25), new s.XE("Cactus",50,20,30,0).setPushability(.5).addDrop(h("Cactus"), .65).addDrop(h("Stinger"), .55), new s.XE("Baby Ant",10,5,15,2).addDrop(h("Light"), .25).addDrop(h("Leaf"), .15).addDrop(h("Rice"), .5), new s.XE("Worker Ant",15,5,15,3.25).setNeutral(1).addDrop(h("Leaf"), .15).addDrop(h("Corn"), .15), new s.XE("Soldier Ant",25,5,15,3.5).setAggressive(1).addDrop(h("Wing"), .5).addDrop(h("Glass"), .5), new s.XE("Queen Ant",100,5,25,3.5).setAggressive(1).setPushability(.8).addDrop(h("Ant Egg"), 1), new s.XE("Ant Hole",100,1,25,0).setPushability(0).addDrop(h("Dirt"), 0.15, 2).addDrop(h("Ant Egg"), 1), new s.XE("Baby Fire Ant",10,10,15,2).addDrop(h("Light"), .5).addDrop(h("Yucca"), .6), new s.XE("Worker Fire Ant",15,10,15,3.25).setNeutral(1).addDrop(h("Corn"), .3).addDrop(h("Yucca"), .6), new s.XE("Soldier Fire Ant",25,10,15,3.5).setAggressive(1).addDrop(h("Glass"), .5).addDrop(h("Yucca"), .6), new s.XE("Queen Fire Ant",100,10,25,3.5).setAggressive(1).setPushability(.8).addDrop(h("Dirt"), .2).addDrop(h("Ant Egg"), 1), new s.XE("Fire Ant Hole",1,2,25,0).setPushability(0).addDrop(h("Dirt"), .3).addDrop(h("Ant Egg"), 1).addDrop(h("Magnet"), .5, 2), new s.XE("Baby Termite",15,5,15,2).addDrop(h("Bone"), .6), new s.XE("Worker Termite",20,5,15,3.25).setNeutral(1).addDrop(h("Bone"), .7), new s.XE("Soldier Termite",30,5,15,3.5).setAggressive(1).addDrop(h("Bone"), .8), new s.XE("Termite Overmind",150,2,30,.5).setNeutral(1).setPushability(.5).addDrop(h("Ant Egg"), 1), new s.XE("Termite Mound",150,1,30,0).setPushability(0).addDrop(h("Dirt"), .3).addDrop(h("Magnet"), .5), new s.XE("Ant Egg",20,1,15,0).addDrop(h("Ant Egg"), .6), new s.XE("Queen Ant Egg",20,1,15,0), new s.XE("Fire Ant Egg",20,2,15,0).addDrop(h("Ant Egg"), .6), new s.XE("Queen Fire Ant Egg",20,2,15,0), new s.XE("Termite Egg",30,1,15,0).addDrop(h("Ant Egg"), .6), new s.XE("Evil Ladybug",25,15,25,2.5).setNeutral(1).setDamageReduction(.125).addDrop(h("Dahlia"), .5).addDrop(h("Yin Yang"), .1, 2), new s.XE("Shiny Ladybug",25,10,25,2.5).setNeutral(1).addDrop(h("Yggdrasil"), .5, 2).addDrop(h("Rose"), 1).addDrop(h("Dahlia"), 1), new s.XE("Angelic Ladybug",55,15,25,2.5).setNeutral(1).setDamageReflection(.05, .5).addDrop(h("Dahlia")).addDrop(h("Yin Yang"), .15).addDrop(h("Third Eye"), .05, 3), new s.XE("Centipede",25,10,22.5,3.5).setNeutral(1).setCentipedeMovement(1).addDrop(h("Peas"), .1).addDrop(h("Leaf"), .1), new s.XE("Centipede",25,10,22.5,3.5).setSystem(1).setNeutral(1).setCentipedeMovement(1).addDrop(h("Peas"), .1).addDrop(h("Leaf"), .1), new s.XE("Desert Centipede",20,10,22.5,5).setDesertCentipedeMovement(1).setNeutral(1).addDrop(h("Powder"), .15).addDrop(h("Sand"), .1), new s.XE("Desert Centipede",20,10,22.5,5).setSystem(1).setDesertCentipedeMovement(1).setNeutral(1).addDrop(h("Powder"), .15).addDrop(h("Sand"), .1), new s.XE("Evil Centipede",25,10,22.5,3.5).setAggressive(1).setCentipedeMovement(1).addDrop(h("Iris"), .1).addDrop(h("Grapes"), .05), new s.XE("Evil Centipede",25,10,22.5,3.5).setSystem(1).setAggressive(1).setCentipedeMovement(1).addDrop(h("Iris"), .1).addDrop(h("Grapes"), .05), new s.XE("Dandelion",25,10,22.5,0).setPushability(.5).addDrop(h("Dandelion"), .6).addDrop(h("Pollen"), .1), new s.XE("Sponge",35,3,30,0).addDrop(h("Sponge"), .3), new s.XE("Bubble",1,1,30,0).addDrop(h("Bubble"), .5).addDrop(h("Air"), 1), new s.XE("Shell",40,10,32.5,25).setMovesInBursts(1).setNeutral(1).addDrop(h("Shell"), .5).addDrop(h("Pearl"), .3).addDrop(h("Magnet"), .1), new s.XE("Starfish",30,10,30,4).setAggressive(1).setSpins(1).setHealing(.007).setFleeAtLowHealth(.35).addDrop(h("Starfish"), .6).addDrop(h("Sand"), .4), new s.XE("Leech",25,3.5,16,5.5).setAggressive(1).addDrop(h("Fang"), .3).addDrop(h("Faster"), .6), new s.XE("Maggot",30,10,35,2).setAggressive(1).setProjectile({
                 petalIndex: h("Goo"),
                 cooldown: 61.875,
                 health: 2,
@@ -3687,14 +4453,14 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                 speed: 3,
                 range: 45,
                 size: .35
-            }).addDrop(h("Goo")).addDrop(h("Maggot Poo"), .5).addDrop(h("Dirt"), .65), new s.XE("Firefly",30,10,25,4).setMoveInSines(1).addDrop(h("Wing")).addDrop(h("Lightbulb"), .6).addDrop(h("Battery"), .4), new s.XE("Bumblebee",25,15,30,5).setMoveInSines(1).setBumblebeeMovement(1).setProjectile({
+            }).addDrop(h("Goo")).addDrop(h("Maggot Poo"), .5).addDrop(h("Dirt"), .65), new s.XE("Firefly",30,10,25,4).setMoveInSines(1).addDrop(h("Wing"), .6).addDrop(h("Lightbulb"), .6).addDrop(h("Battery"), .2), new s.XE("Bumblebee",25,15,30,5).setMoveInSines(1).setBumblebeeMovement(1).setProjectile({
                 petalIndex: h("Pollen"),
                 cooldown: 11.25,
                 health: 1,
                 damage: 1,
                 speed: 0,
                 range: 90
-            }).addDrop(h("Pollen")).addDrop(h("Honey")), new s.XE("Moth",25,10,25,3).setMoveInSines(1).setNeutral(1).setFleeAtLowHealth(1).addDrop(h("Wing")).addDrop(h("Lightbulb"), .6).addDrop(h("Dust"), .4), new s.XE("Fly",15,2.5,20,6).setAggressive(1).setMoveInSines(1).addDrop(h("Wing")).addDrop(h("Faster"), .8).addDrop(h("Third Eye"), .02, 5), new s.XE("Square",50,3.5,30,0).addDrop(h("Square Egg")), new s.XE("Triangle",100,5.5,32.5,0).addDrop(h("Triangle Egg")), new s.XE("Pentagon",150,7.5,35,0).addDrop(h("Pentagon Egg")), new s.XE("Hell Beetle",35,15,35,4).setAggressive(1).setPushability(.8).addDrop(h("Dust"), .8).addDrop(h("Pincer"), .8).addDrop(h("Beetle Egg"), .8), new s.XE("Hell Spider",25,15,20,4).setAggressive(1).setPoison(5, 3).setPushability(.8).addDrop(h("Faster")).addDrop(h("Web"), .5).addDrop(h("Dahlia"), .5).setProjectile({
+            }).addDrop(h("Pollen"), .9).addDrop(h("Honey"), .8), new s.XE("Moth",25,10,25,3).setMoveInSines(1).setNeutral(1).setFleeAtLowHealth(1).addDrop(h("Wing"), .6).addDrop(h("Lightbulb"), .8), new s.XE("Fly",1.5,2.5,20,6).setAggressive(1).setMoveInSines(1).setDamageReduction(0.9).addDrop(h("Wing"), 0.8).addDrop(h("Wing")), new s.XE("Square",50,3.5,30,0).addDrop(h("Square Egg")), new s.XE("Triangle",100,5.5,32.5,0).addDrop(h("Triangle Egg")), new s.XE("Pentagon",150,7.5,35,0).addDrop(h("Pentagon Egg")), new s.XE("Hell Beetle",35,15,35,4).setAggressive(1).setPushability(.8).addDrop(h("Dust"), .8).addDrop(h("Pincer"), .8).addDrop(h("Beetle Egg"), .8), new s.XE("Hell Spider",25,15,20,4).setAggressive(1).setPoison(5, 3).setPushability(.8).addDrop(h("Faster")).addDrop(h("Web"), .5).addDrop(h("Dahlia"), .5).setProjectile({
                 petalIndex: h("Web") + 1,
                 cooldown: 22.5,
                 health: 1 / 0,
@@ -3749,13 +4515,13 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                         return e;
                 return -1
             }
-            n[h("Beetle Egg")].setSpawnable(o("Beetle"), [0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 4),
-            n[h("Stick")].setSpawnable(o("Sandstorm"), [0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 4),
-            n[h("Ant Egg")].setSpawnable(o("Soldier Ant"), [0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 4),
+            n[h("Beetle Egg")].setSpawnable(o("Beetle"), [0, 0, 1, 2, 3, 4, 5, 6], 1),
+            n[h("Stick")].setSpawnable(o("Sandstorm"), [0, 0, 0, 2, 3, 4, 5, 6], 1),
+            n[h("Ant Egg")].setSpawnable(o("Soldier Ant"), [0, 0, 1, 2, 3, 4, 5, 6], 1),
             n[h("Branch")].setSpawnable(o("Wilt") + 1, [0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 5),
             n[h("Leech Egg")].setSpawnable(o("Leech"), [0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 3),
-            n[h("Hornet Egg")].setSpawnable(o("Hornet"), [0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 5),
-            n[h("Square Egg")].setSpawnable(o("Square"), [0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 2),
+            n[h("Hornet Egg")].setSpawnable(o("Hornet"), [0, 0, 1, 2, 3, 4, 5, 6], [14, 7, 8.75, 10.5, 10.5, 15.75, 24.5, 122.5]),
+            n[h("Square Egg")].setSpawnable(o("Square"), [0, 1, 2, 3, 4, 5, 6, 7], 30),
             n[h("Triangle Egg")].setSpawnable(o("Triangle"), [0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 2),
             n[h("Pentagon Egg")].setSpawnable(o("Pentagon"), [0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 2),
             r[o("Angelic Ladybug")].setPoopable({
@@ -3780,17 +4546,8 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                 minHealthRatio: .01
             }]),
             r[o("Fire Ant Hole")].setAntHoleSpawns([{
-                index: o("Baby Fire Ant"),
-                count: [4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7]
-            }, {
-                index: o("Worker Fire Ant"),
-                count: [5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8]
-            }, {
                 index: o("Soldier Fire Ant"),
-                count: [6, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9]
-            }, {
-                index: o("Fire Ant Egg"),
-                count: 5
+                count: [12, 12, 12, 14, 14, 14, 16, 16, 16, 18, 18, 18]
             }, {
                 index: o("Queen Fire Ant"),
                 count: 1,
@@ -4166,7 +4923,7 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                 livingMobCount: 0,
                 aliveMobs: [],
                 alivePlayers: [],
-                inventory: Object.fromEntries(s.cK.map((t => [t.name, {}]))),
+                inventory: {},
                 secretKey: crypto.getRandomValues(new Uint8Array(32)).join(""),
                 zones: [],
                 lag: {
@@ -4649,14 +5406,17 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                             if (!0 === this.config.wingMovement && (o.facing += .15),
                             this.config.tiers[this.rarity].spawnable && (o.range--,
                             o.range <= 0)) {
+                                const ParentSkills = (this.player && this.player.client && this.player.client.skills) || {};
                                 const t = new y(o);
                                 t.parent = this.player,
                                 t.team = this.player.team,
                                 t.friendly = !0,
                                 h.A.livingMobCount--,
                                 t.define(n.ey[this.config.tiers[this.rarity].spawnable.index], this.config.tiers[this.rarity].spawnable.rarity),
-                                t.health.maxHealth *= 6,
-                                t.health.health *= 6,
+                                t.health.maxHealth *= (1 * Math.pow(1.2, ParentSkills.egghp) || 1),
+                                t.health.health *= (1 * Math.pow(1.2, ParentSkills.egghp) || 1),
+                                t.damage *= (1 * Math.pow(1.15, ParentSkills.eggdamage) || 1),
+                                t.size *= (1 * Math.pow(1.1, ParentSkills.eggsize) || 1),
                                 this.boundMobs[i].push(t),
                                 o.health.health = 0,
                                 t.segmentBodies && t.segmentBodies.forEach((e => {
@@ -4670,8 +5430,10 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                             if (this.boundMobs[i].length > 0 && (this.boundMobs[i] = this.boundMobs[i].filter((t => t && !t.health.isDead)),
                             this.boundMobs[i].length > 0))
                                 continue;
+                            const ParentSkills = (this.player && this.player.client && this.player.client.skills) || {};
+                            const Reload = this.config.tiers[this.rarity].cooldown || this.config.cooldown;
                             this.cooldowns[i]++,
-                            this.cooldowns[i] >= this.config.cooldown && (this.petals[i] = new g(this.player,this.index,i),
+                            this.cooldowns[i] >= (Reload * Math.pow(0.85, ParentSkills.reload)) && (this.petals[i] = new g(this.player,this.index,i),
                             this.petals[i].define(this.config, this.rarity),
                             this.cooldowns[i] = 0)
                         }
@@ -4679,11 +5441,13 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     return this.clumps ? e + 1 : e + this.amount
                 }
                 get gui() {
+                    const ParentSkills = (this.player && this.player.client && this.player.client.skills) || {};
+                    const Reload = this.config.tiers[this.rarity].cooldown || this.config.cooldown;
                     return {
                         index: this.config.id,
                         rarity: this.rarity,
                         alive: this.petals.some((t => t?.health.ratio > 0)),
-                        cooldown: Math.min(...this.cooldowns) / this.config.cooldown
+                        cooldown: Math.min(...this.cooldowns) / (Reload * Math.pow(0.85, ParentSkills.reload))
                     }
                 }
             }
@@ -4809,6 +5573,43 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     }
                 }
                 update() {
+                    if (this.destruct === 1) {
+                        const players = Array.from(h.A.clients.values())
+                            .map(c => c.body)
+                            .filter(b => b && !b.health.isDead);
+                    
+                        const inRange = players.some(p => {
+                            const dx = this.x - p.x;
+                            const dy = this.y - p.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            return dist < this.size * 20 / (this.rarity / 4 + 1);
+                        });
+                    
+                        if (inRange && !this._destructInterval) {
+                            this._destructInterval = setInterval(() => {
+                                if (!this.health || this.health.health <= 0) {
+                                    clearInterval(this._destructInterval);
+                                    this._destructInterval = null;
+                                    return;
+                                }
+                    
+                                const dmg = this.health.maxHealth * 0.05;
+                    
+                                if (typeof this.health.damage === "function") {
+                                    this.health.damage(dmg);
+                                } else {
+                                    this.health.health -= dmg;
+                                }
+                    
+                                if (this.health.health <= 0) {
+                                    this.health.health = 0;
+                                    clearInterval(this._destructInterval);
+                                    this._destructInterval = null;
+                                    if (typeof this.destroy === "function") this.destroy();
+                                }
+                            }, 100);
+                        }
+                    }
                     if (this.health.isDead)
                         this.destroy();
                     else {
@@ -5073,6 +5874,7 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     this.placeDown = !1,
                     this.rarity = 0,
                     this.armor = 0,
+                    this.usedskillpoints = false,
                     this.lightning = null,
                     this.burst = !1,
                     this.faceInRelation = !1,
@@ -5080,18 +5882,22 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                 }
                 define(t, e) {
                     const i = t.tiers[e];
+                    const ParentSkills = (this.parent && this.parent.client && this.parent.client.skills) || {};
                     this.rarity = e,
-                    this.health.set(i.health),
-                    this.damage = i.damage,
+                    this.health.set(i.health * Math.pow(1.2, ParentSkills.petalhp || 0));
+                    this.damage = i.damage * Math.pow(1.15, ParentSkills.petaldamage || 0),
                     this.config = t,
-                    this.size *= t.sizeRatio,
+                    this.size *= t.sizeRatio * Math.pow(1.15, ParentSkills.petalsize || 0),
                     this.index = t.id,
                     this.spinSpeed = t.launchable ? 0 : .1,
                     this.armor = 0,
+                    this.usedskillpoints = 0,
+                    this.range = 33.75,
                     t.enemySpeedDebuff && (this.speedDebuff.toApply.multiplier = t.enemySpeedDebuff.speedMultiplier,
                     this.speedDebuff.toApply.timer = t.enemySpeedDebuff.duration),
                     i.poison && (this.poison.toApply.damage = i.poison.damage,
                     this.poison.toApply.timer = i.poison.duration),
+                    t.revives && (this.revives = t.revives),
                     i.spawnable && (this.range = i.spawnable.timer,
                     this.spinSpeed = 0),
                     i.lightning && (this.lightning = i.lightning,
@@ -5138,6 +5944,9 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     [i, r]
                 }
                 update() {
+                    if (!this.usedskillpoints) {
+                        this.usedskillpoints = true;
+                    }
                     if (this.dandelionBind)
                         return this.x = this.dandelionBind.x + Math.cos(this.facing) * (this.size + 1.2 * this.dandelionBind.size),
                         this.y = this.dandelionBind.y + Math.sin(this.facing) * (this.size + 1.2 * this.dandelionBind.size),
@@ -5159,9 +5968,49 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     this.velocity.y += Math.sin(this.moveAngle) * this.speed * this.moveStrength,
                     this.facing += this.spinSpeed,
                     !1 !== this.faceInRelation && (this.facing = Math.atan2(this.y - this.parent.y, this.x - this.parent.x) + this.faceInRelation),
-                    this.launched && (this.range--,
-                    this.range <= 0) ? this.destroy() : super.update()
-                }
+
+                    (this.launched && (this.range--, this.range <= 0))
+                      ? (
+                          this.destroy(),
+                    
+                          (this.revives == 1)
+                            ? (
+                                h.A.clients.values().toArray()
+                                  .filter((client) => client.body == null)
+                                  .forEach((client) => {
+                                    client.DiedInWaves = false,
+                                    client.spawnX = this.x,
+                                    client.spawnY = this.y,
+                                    client.talk(s.fh.SPAWN)
+                                  })
+                              )
+                    
+                            : (this.revives == 2)
+                              ? (
+                                  h.A.clients.values().toArray()
+                                    .filter((client) => client.body == null)
+                                    .sort((a, b) => a.deathID - b.deathID)
+                                    .slice(0, this.revives + 1)
+                                    .forEach((client) => {
+                                      client.body = new p(this);
+                                      client.body.name = client.username;
+                                      client.body.nameColor = client.nameColor;
+                                      client.body.client = client;
+                                      client.body.health.set(client.healthAdjustement);
+                                      client.body.damage = client.bodyDamageAdjustment;
+                                      client.body.initSlots(client.slots.length);
+                                      for (let i = 0; i < client.slots.length; i++) {
+                                        client.body.setSlot(i, client.slots[i].id, client.slots[i].rarity);
+                                      }
+                                      if (h.A.isTDM) client.body.team = -client.team;
+                                    })
+                                )
+                    
+                              : super.update()
+                        )
+                    
+                      : super.update();
+                        }
                 collide() {
                     if (this.launched && !1 === this.ignoreWalls) {
                         h.A.terrainSpatialHash.retrieve(this).forEach((t => {
@@ -5209,7 +6058,7 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     if (this.client)
                         return this.client.highestRarity;
                     let t = 0;
-                    return this.petalSlots.forEach((e => {
+                    return this.petalSlotorEach((e => {
                         t = Math.max(t, e.rarity)
                     }
                     )),
@@ -5279,7 +6128,6 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                           , e = []
                           , i = {}
                           , n = this.petalSlots.reduce(( (t, e) => t + Math.pow(e.rarity + 1, 3)), 0);
-                        this.client.addXP(.1 * -Math.random() * this.client.xp),
                         t.forEach((t => {
                             if (t.type === s.wv.PLAYER && (e.push(t.name),
                             null !== t.clientID)) {
@@ -5293,8 +6141,23 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                         a.TH)(t) : t)))];
                         let o = "You were killed by ";
                         r.length > 0 ? o += r.slice(0, -1).join(", ") + (r.length > 1 ? " and " : "") + r[r.length - 1] : o += '"the game"',
+                        this.client.DiedInWaves = true,
                         this.client.talk(s.de.DEATH, o),
-                        this.client.body = null,
+                        this.client.body = null
+                        const allPlayersDead = Array.from(h.A.clients.values()).every(client => client.body == null);
+                        if (allPlayersDead) {
+                            h.A.currentWave = 0;
+                            h.A.entities.forEach(ent => {
+                                if (ent.type === s.wv.MOB) {
+                                    ent.destroy({ skipDrops: true });
+                                }
+                            });
+                            Array.from(h.A.clients.values()).forEach(client => {
+                                client.DiedInWaves = false;
+                                client.talk(s.fh.SPAWN);
+                            });
+                            h.A.clients.forEach(t => t.systemMessage("Everyone has died, resetting lobby.", "#F03"));
+                        }
                         h.A.alivePlayers = h.A.alivePlayers.filter((t => t.id !== this.client.id))
                     }
                 }
@@ -5344,10 +6207,10 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     this.body && !this.body.health.isDead && this.body.initSlots(e)
                 }
                 get healthAdjustement() {
-                    return 40 + 5 * Math.pow(this.level, 1.5)
+                    return 40 + 5 * Math.pow(this.level, 1.2)
                 }
                 get bodyDamageAdjustment() {
-                    return 5 + 1 * Math.pow(this.level, 1.5)
+                    return 5 + 1 * Math.pow(this.level, 1.4)
                 }
                 get highestRarity() {
                     let t = 0;
@@ -5444,6 +6307,7 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     this.target = null,
                     this.targetTick = 0,
                     this.extraTicker = 0,
+                    this.destruct = 0,
                     this.projectile = null,
                     this.givesXP = !0,
                     h.A.livingMobCount++,
@@ -5484,6 +6348,7 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                     this.rarity = e,
                     this.aggressive = t.aggressive,
                     this.neutral = t.neutral,
+                    this.destruct = t.destruct,
                     this.spins = t.spins,
                     this.healing = t.healing,
                     this.fleeAtLowHealth = t.fleeAtLowHealth,
@@ -5559,7 +6424,7 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                         let i = 3
                           , s = Math.max(.1, .8 - this.rarity / 9 * .31);
                         for (let t = 0; t < 27 && Math.random() < s; t++)
-                            i++;
+                            i+=0.5;
                         let a = this;
                         this.segmentID = e,
                         this.segmentBodies = [];
@@ -5886,48 +6751,139 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
                         this.extraTicker = t.cooldown * (.95 + .1 * Math.random()))
                     }
                 }
-                destroy() {
+                destroy({ skipDrops = false } = {}) {
                     if (this.deathEvent && this.deathEvent(),
                     super.destroy(),
                     !this.friendly && this.countsTowardsMobCount && h.A.livingMobCount--,
                     !this.givesXP)
                         return;
-                    const t = this.getTopDamagers(3, s.wv.PLAYER);
+                    const t = this.getTopDamagers(16, s.wv.PLAYER);
+                    const rarityDropTable = {
+                        0: [ // Common
+                            { rarity: 0, weight: 0, value: 1},
+                            { rarity: 0, weight: 1, value: 1},
+                        ],
+                        1: [ // Unusual
+                          { rarity: 0, weight: 0, value: 1},
+                          { rarity: 1, weight: 1, value: 1}
+                        ],
+                        2: [ // Rare
+                          { rarity: 0, weight: 0, value: 5},
+                          { rarity: 1, weight: 0.7, value: 5},
+                          { rarity: 2, weight: 0.3, value: 1}
+                        ],
+                        3: [ // Epic
+                          { rarity: 1, weight: 0, value: 1},
+                          { rarity: 2, weight: 0.8, value: 1},
+                          { rarity: 3, weight: 0.2, value: 1}
+                        ],
+                        4: [ // Legendary
+                          { rarity: 2, weight: 0, value: 1},
+                          { rarity: 3, weight: 0.93, value: 1},
+                          { rarity: 4, weight: 0.07, value: 1},
+                        ],
+                        5: [ // Mythic
+                          { rarity: 3, weight: 0, value: 1},
+                          { rarity: 3, weight: 0.2, value: 1},
+                          { rarity: 4, weight: 0.79, value: 1},
+                          { rarity: 5, weight: 0.01, value: 1},
+                        ],
+                        6: [ // Ultra
+                          { rarity: 4, weight: 0, value: 1},
+                          { rarity: 4, weight: 0.4, value: 1},
+                          { rarity: 5, weight: 0.595, value: 1},
+                          { rarity: 6, weight: 0.005, value: 1},
+                        ],
+                        7: [ // Super
+                          { rarity: 5, weight: 0, value: 1},
+                          { rarity: 5, weight: 0.78, value: 1},
+                          { rarity: 6, weight: 0.22, value: 1},
+                        ]}
+                    const cofrarities = [
+                        "#7EEF6D",
+                        "#FFE65D",
+                        "#455FCF",
+                        "#7633CB",
+                        "#C13328",
+                        "#1ED2CB",
+                        "#ff2b75",
+                        "#2affa3",
+                    ];
+                    const PETALS = [
+                        "Basic","Light","Faster","Heavy","Stinger","Rice","Rock","Cactus","Leaf","Wing",
+                        "Bone","Dirt","Magnolia","Corn","Sand","Orange","Missile","Pea","Rose","Yin Yang",
+                        "Pollen","Honey","Iris","Web","web.mob.launched","Third Eye","Pincer","Beetle Egg",
+                        "Antennae","Peas","Stick","scorpion.projectile","Dahlia","Primrose","Fire Spellbook",
+                        "Deity","Lightning","Powder","Ant Egg","Yucca","Magnet","Amulet","Jelly","Yggdrasil",
+                        "Glass","Dandelion","Sponge","Pearl","Shell","Bubble","Air","Starfish","Fang","Goo",
+                        "Maggot Poo","Lightbulb","Battery","Dust","Armor","wasp.projectile","Shrub","projectile.grape",
+                        "Grapes","Lantern","web.player.launched","Branch","Leech Egg","Hornet Egg","Candy",
+                        "Claw","projectile.diep_bullet","Square Egg","Triangle Egg","Pentagon Egg"
+                    ];
                     let e = "";
-                    if (t.forEach((t => {
-                        if (t.clientID > 0) {
-                            const e = h.A.clients.get(t.clientID);
-                            if (e) {
-                                e.addXP((.3 * Math.random() + .7) * Math.pow(3, this.rarity + 1));
-                                const t = [];
-                                for (const i of n.ey[this.index].drops) {
-                                    if (Math.random() > i.chance)
-                                        continue;
-                                    const s = (0,
-                                    a.jd)(this.rarity, e.highestRarity + 5);
-                                    s < i.minRarity || t.push(new f(this,e,i.index,s))
+                    const xpvalues = [.1, .38, 1.35, 5.6, 32.4, 243.7, 4575, 87540]
+                    if (!skipDrops) {
+                        if (t.forEach((t => {
+                            try {
+                                if (t.clientID > 0) {
+                                    const e = h.A.clients.get(t.clientID);
+                                    if (e) {
+                                        e.addXP(xpvalues[this.rarity] * 3.24);
+                                        const t = [];
+                                        const A = globalThis.gameState;
+                                        for (const i of n.ey[this.index].drops) {
+                                            for (let j = 0; j < A.luckyWaves; j++) {
+                                                let table = (rarityDropTable)[this.rarity] || [];
+                                                let roll = Math.random();
+                                                let result = null;
+                                                let equ = 1 - i.chance;
+                                                let z = 1;
+                                                for (const entry of table) {
+                                                    roll -= entry.weight * i.chance;
+                                                    if (z < table.length - 1) {
+                                                        const nextentry = table[z];
+                                                        roll -= nextentry.weight * equ;
+                                                    } 
+                                                    z++;
+                                                    if (roll <= 0) {
+                                                        result = entry;
+                                                        break;
+                                                    }
+                                                }
+                                                if (result === null) continue;
+                                                if (result.rarity > 4) {
+                                                    e.chatMessage("System",`${this.config.name} Dropped ${e.username} ${result.value}X ${PETALS[i.index]}`,cofrarities[result.rarity])
+                                                }
+                                                for (let qq = 0; qq < result.value; qq++) {
+                                                    const s = result.rarity;
+                                                    s < i.minRarity || t.push(new f(this,e,i.index,s))
+                                                }
+                                            }
+                                        }
+                                        for (let e = 0; e < t.length; e++)
+                                            t[e].x += 50 * Math.cos(e / t.length * Math.PI * 2),
+                                            t[e].y += 50 * Math.sin(e / t.length * Math.PI * 2)
+                                    }
                                 }
-                                for (let e = 0; e < t.length; e++)
-                                    t[e].x += 30 * Math.cos(e / t.length * Math.PI * 2),
-                                    t[e].y += 30 * Math.sin(e / t.length * Math.PI * 2)
                             }
+                            catch(error) {console.log("Drop error:", error)}
                         }
-                    }
-                    )),
-                    !1 === this.config.isSystem && !this.friendly && !["Queen Ant Egg", "Termite Overmind Egg", "Queen Fire Ant Egg"].includes(this.config.name) && this.rarity >= h.A.announceRarity) {
-                        if (t.length > 0) {
-                            e = (0,
-                            a.Br)(s.cK[this.rarity].name, !0) + " " + this.config.name + " was killed by ";
-                            for (let i = 0, s = t.length; i < s; i++) {
-                                if (!h.A.clients.has(t[i].clientID))
-                                    continue;
-                                const a = h.A.clients.get(t[i].clientID).username;
-                                e += i === s - 1 ? 1 === s ? a : 2 === s ? " and " + a : ", and " + a : 0 === i ? a : ", " + a
-                            }
-                        } else
-                            e = (0,
-                            a.Br)(s.cK[this.rarity].name, !0) + " " + this.config.name + " despawned";
-                        h.A.clients.forEach((t => t.systemMessage(e, s.cK[this.rarity].color)))
+                        )),
+                        !1 === this.config.isSystem && !this.friendly && !["Queen Ant Egg", "Termite Overmind Egg", "Queen Fire Ant Egg"].includes(this.config.name) && this.rarity >= h.A.announceRarity) {
+                            if (t.length > 0) {
+                                e = (0,
+                                a.Br)(s.cK[this.rarity].name, !0) + " " + this.config.name + " was killed by ";
+                                for (let i = 0, s = t.length; i < s; i++) {
+                                    if (!h.A.clients.has(t[i].clientID))
+                                        continue;
+                                    const a = h.A.clients.get(t[i].clientID).username;
+                                    e += i === s - 1 ? 1 === s ? a : 2 === s ? " and " + a : ", and " + a : 0 === i ? a : ", " + a
+                                }
+                            } else
+                                e = (0,
+                                a.Br)(s.cK[this.rarity].name, !0) + " " + this.config.name + " despawned";
+                            h.A.clients.forEach((t => t.systemMessage(e, s.cK[this.rarity].color)))
+                        }
                     }
                 }
             }
@@ -6334,4 +7290,3 @@ console.log(`[SYSTEM] Loaded Accounts: ${Object.keys(PLAYER_ACCOUNTS)}`);
     h(58)
 }
 )();
-
